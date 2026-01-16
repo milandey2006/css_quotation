@@ -15,37 +15,108 @@ const QuotationPreview = ({ data }) => {
   const gstTotal = data.items.reduce((acc, item) => acc + ((item.qty * item.price) * (item.gst / 100)), 0);
   const grandTotal = subTotal + gstTotal;
 
-  // --- Pagination Logic ---
-  const ITEMS_PER_FIRST_PAGE = 6;
-  const ITEMS_PER_PAGE = 10;
+  // --- Pagination Logic (Dynamic Height Estimation & Splitting) ---
+  const MAX_CHARS_PER_LINE = 90;
+  const PAGE_1_LIMIT = 16; 
+  const PAGE_N_LIMIT = 24;
+  const CHARS_PER_WEIGHT = 120; 
+
+  const getItemWeight = (description = '') => {
+    const lines = Math.max(1, Math.ceil(description.length / MAX_CHARS_PER_LINE) + (description.split('\n').length - 1));
+    return 1 + (lines * 0.60); 
+  };
 
   const pages = [];
-  const items = [...data.items];
+  let currentPage = [];
+  let currentUsage = 0;
+  let currentLimit = PAGE_1_LIMIT;
 
-  // First page chunk
-  if (items.length > 0) {
-    pages.push(items.splice(0, ITEMS_PER_FIRST_PAGE));
-  } else {
-    pages.push([]); // Empty page if no items
+  // Process items with potential splitting
+  // Assign Serial Numbers BEFORE splitting
+  let queue = data.items.map((item, i) => ({ ...item, _sr: i + 1 }));
+
+  while (queue.length > 0) {
+      let item = queue.shift();
+      const weight = getItemWeight(item.description);
+      const remainingSpace = currentLimit - currentUsage;
+
+      // If item fits, just add it
+      if (weight <= remainingSpace + 0.5) { 
+          currentPage.push(item);
+          currentUsage += weight;
+      } else {
+          // SPLITTING LOGIC
+          // Lower threshold to fill gaps (if > 0.8 units space, try to split)
+          if (remainingSpace > 0.8 && weight > 2.5) {
+              const availableLines = Math.floor((remainingSpace - 1) / 0.7);
+              
+              if (availableLines >= 1) { // Allow even smaller splits (1 line)
+                  const approxChars = Math.floor(availableLines * MAX_CHARS_PER_LINE);
+                  const description = item.description || '';
+                  
+                  let cutIndex = description.lastIndexOf('\n', approxChars);
+                  if (cutIndex === -1 || cutIndex < approxChars * 0.5) {
+                       cutIndex = description.lastIndexOf(' ', approxChars);
+                  }
+                  if (cutIndex === -1) cutIndex = approxChars; 
+                  
+                  const part1Desc = description.substring(0, cutIndex);
+                  const part2Desc = description.substring(cutIndex).trim();
+
+                  // PART 1 (Current Page)
+                  currentPage.push({
+                      ...item,
+                      description: part1Desc + " ... (Continued)",
+                      price: 0, 
+                      qty: '', 
+                      gst: '',
+                      hsn: item.hsn, 
+                      make: item.make, 
+                      _sr: item._sr, // Show SR on first part
+                      isPartial: true
+                  });
+                  
+                  pages.push(currentPage);
+                  currentPage = [];
+                  currentUsage = 0;
+                  currentLimit = PAGE_N_LIMIT;
+
+                  // PART 2 (Next Page Queue)
+                  queue.unshift({
+                      ...item,
+                      description: "(Continued) ... " + part2Desc,
+                      _sr: '', // No SR for continuation
+                      isContinuation: true
+                  });
+                  continue; 
+              }
+          }
+
+          pages.push(currentPage);
+          currentPage = [];
+          currentUsage = 0;
+          currentLimit = PAGE_N_LIMIT;
+          queue.unshift(item); 
+      }
   }
 
-  // Subsequent page chunks
-  while (items.length > 0) {
-    pages.push(items.splice(0, ITEMS_PER_PAGE));
+  // Push the final partially filled page
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  } else if (pages.length === 0) {
+     pages.push([]); 
   }
 
-  // Force a new page for the Footer (Terms & Conditions, Signatures)
-  // This page will have no items, just the footer content.
+  // Force a new page for the Footer
   pages.push([]); 
   
-  // Helper to check if this is the last page
   const isLastPage = (index) => index === pages.length - 1;
 
   // Render Page Content
   const renderPage = (pageItems, pageIndex) => (
     <div 
       key={pageIndex} 
-      className={`bg-white shadow-2xl mx-auto w-[210mm] min-h-[297mm] p-10 relative text-sm sm:text-base text-gray-800 mb-8 overflow-hidden print:shadow-none print:mb-0 print:w-full print:h-[296mm] print:overflow-hidden print:mx-0 ${pageIndex < pages.length - 1 ? 'print:break-after-page' : ''}`}
+      className={`bg-white shadow-2xl mx-auto w-[210mm] h-[297mm] p-10 relative text-sm sm:text-base text-gray-800 mb-8 overflow-hidden flex flex-col print:shadow-none print:mb-0 print:w-full print:h-[297mm] print:overflow-hidden print:mx-0 ${pageIndex < pages.length - 1 ? 'print:break-after-page' : ''}`}
       style={{ fontFamily: 'Inter, sans-serif' }}
     >
        {/* Watermark (Repeated on every page for consistency) */}
@@ -61,7 +132,7 @@ const QuotationPreview = ({ data }) => {
           </div>
        </div>
 
-       <div className="relative z-10 flex flex-col h-full justify-between">
+       <div className="relative z-10 flex flex-col flex-grow justify-start">
          {/* Top Content Wrapper */}
          <div>
             {pageIndex === 0 ? (
@@ -176,7 +247,7 @@ const QuotationPreview = ({ data }) => {
                             <th className="w-10 py-2 border-r border-slate-300 text-center font-bold">Sr.n</th>
                             <th className="px-3 py-2 border-r border-slate-300 text-left font-bold">Particulars</th>
                             {data.showImages && <th className="w-20 py-2 border-r border-slate-300 text-center font-bold">Image</th>}
-                            <th className="w-16 py-2 border-r border-slate-300 text-center font-bold">HSN/SAC</th>
+                            {data.showHSN !== false && <th className="w-16 py-2 border-r border-slate-300 text-center font-bold">HSN/SAC</th>}
                             <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">QTY</th>
                             <th className="w-20 py-2 border-r border-slate-300 text-right px-2 font-bold">Rate</th>
                             <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">GST %</th>
@@ -186,11 +257,9 @@ const QuotationPreview = ({ data }) => {
                     </thead>
                     <tbody>
                         {pageItems.map((item, index) => {
-                            const originalIndex = (pageIndex === 0 ? 0 : ITEMS_PER_FIRST_PAGE) + (pageIndex > 1 ? (pageIndex - 1) * ITEMS_PER_PAGE : 0) + index;
-                            
-                            return (
+                                return (
                                 <tr key={index} className="border-b border-slate-200 ">
-                                    <td className="w-10 py-2 border-r border-slate-200 text-center font-bold text-slate-700">{String(originalIndex + 1)}</td>
+                                    <td className="w-10 py-2 border-r border-slate-200 text-center font-bold text-slate-700">{item._sr}</td>
                                     
                                     <td className="px-3 py-2 border-r border-slate-200 text-slate-800 text-left align-top">
                                         <div className="whitespace-pre-wrap">{item.description}</div>
@@ -206,7 +275,7 @@ const QuotationPreview = ({ data }) => {
                                         </td>
                                     )}
                                     
-                                    <td className="w-16 py-2 border-r border-slate-200 text-center text-slate-800 px-1 align-top">{item.hsn || '-'}</td>
+                                    {data.showHSN !== false && <td className="w-16 py-2 border-r border-slate-200 text-center text-slate-800 px-1 align-top">{item.hsn || '-'}</td>}
                                     <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 font-semibold align-top">{item.qty}</td>
                                     <td className="w-20 py-2 border-r border-slate-200 text-right text-slate-800 px-2 align-top">{item.price.toLocaleString('en-IN')}</td>
                                     <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 align-top">{item.gst}%</td>
@@ -223,9 +292,8 @@ const QuotationPreview = ({ data }) => {
             )}
          </div>
 
-         {/* Totals Section - Render on the last page that contains items (pages.length - 2) */}
          {pageIndex === pages.length - 2 && (
-            <div className="mt-auto">
+            <div className={pages.length === 2 ? "mt-auto" : "mt-8"}>
                 <div className="flex justify-between items-end mb-8 mt-4">
                    {/* Amount in Words */}
                    <div className="w-1/2 pr-4">

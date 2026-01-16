@@ -199,15 +199,24 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
        {/* Items Meta Options */}
        <div className="mb-6">
         <h3 className="text-lg font-semibold mb-3 text-blue-600">Settings</h3>
-         <div className="flex items-center gap-2">
-            <input 
-                type="checkbox" 
-                checked={data.showImages} 
-                onChange={(e) => onChange('meta', 'showImages', e.target.checked)}
-                id="showImages"
-            />
-            <label htmlFor="showImages">Show Item Images</label>
-         </div>
+            <div className="flex items-center gap-2">
+                 <input 
+                     type="checkbox" 
+                     checked={data.showImages} 
+                     onChange={(e) => onChange('meta', 'showImages', e.target.checked)}
+                     id="showImages"
+                 />
+                 <label htmlFor="showImages" className="text-sm">Show Item Images</label>
+            </div>
+            <div className="flex items-center gap-2">
+                 <input 
+                     type="checkbox" 
+                     checked={data.showHSN} 
+                     onChange={(e) => onChange('meta', 'showHSN', e.target.checked)}
+                     id="showHSN"
+                 />
+                 <label htmlFor="showHSN" className="text-sm">Show HSN/SAC</label>
+            </div>
       </div>
 
 
@@ -225,13 +234,13 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
         
         <div className="space-y-4">
           {data.items.map((item, index) => (
-            <div key={index} className="p-4 border border-gray-100 rounded-lg bg-gray-50/50 relative group hover:border-blue-100 transition-colors">
+            <div key={index} className="p-6 border border-gray-100 rounded-lg bg-gray-50/50 relative group hover:border-blue-100 transition-colors">
               <button
                 onClick={() => onRemoveItem(index)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
+                className="absolute right-1 -top-0.5 text-red-400 hover:text-red-500 transition-colors p-1 hover:bg-red-50 rounded-full"
               >
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                  </svg>
               </button>
               <div className="space-y-3">

@@ -20,6 +20,7 @@ export default function CreateQuotation() {
     subject: "Quotation For Matrix 5MP IP/ Network camera",
     gstNo: "27AHXPD7350C1Z8", // Default GST
     showImages: true,
+    showHSN: true,
     sender: {
       name: "Champion Security System",
       address: "Office-21 A Gr Floor, New Apollo Estate Old Nagardas Road, Andheri East Mumbai 400069",
@@ -104,7 +105,7 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
   const addItem = () => {
     setData(prev => ({
       ...prev,
-      items: [...prev.items, { description: "", make: "", qty: 1, price: 0, gst: 18, image: "", hsn: "" }]
+      items: [{ description: "", make: "", qty: 1, price: 0, gst: 18, image: "", hsn: "" }, ...prev.items]
     }));
   };
 
@@ -216,7 +217,7 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
     <main className="min-h-screen bg-gray-50 flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden select-none print:min-h-0 print:h-auto print:overflow-visible print:block print:bg-white">
       {/* Left Panel - Editor */}
       <div 
-        className="w-full lg:h-full overflow-y-auto lg:overflow-hidden flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden"
+        className="w-full lg:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden"
         style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : '100%' }}
       >
         <QuotationForm 
@@ -230,15 +231,14 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
           isEditMode={!!id}
           onShare={handleShare}
         />
-        
-        {/* Resizer Handle */}
-        <div
-          className="hidden lg:flex absolute top-0 right-0 w-4 h-full cursor-col-resize hover:bg-blue-500/10 bg-transparent transition-colors z-50 items-center justify-center group"
-          onMouseDown={startResizing}
-        >
-             {/* Visual indicator on hover */}
-             <div className="w-1 h-12 bg-gray-300 group-hover:bg-blue-500 rounded-full transition-all"></div>
-        </div>
+      </div>
+
+       {/* Resizer Handle - Now a Sibling */}
+       <div
+        className="hidden lg:flex w-4 h-full cursor-col-resize hover:bg-blue-500/10 bg-gray-50 transition-colors z-50 items-center justify-center group flex-shrink-0 -ml-2"
+        onMouseDown={startResizing}
+      >
+           <div className="w-1 h-12 bg-gray-300 group-hover:bg-blue-500 rounded-full transition-all"></div>
       </div>
 
       {/* Right Panel - Preview */}

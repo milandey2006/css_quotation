@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuotationForm from "../components/QuotationForm";
 import QuotationPreview from "../components/QuotationPreview";
 
-export default function CreateQuotation() {
+function CreateQuotationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
@@ -248,5 +248,13 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
          </div>
       </div>
     </main>
+  );
+}
+
+export default function CreateQuotation() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <CreateQuotationContent />
+    </Suspense>
   );
 }

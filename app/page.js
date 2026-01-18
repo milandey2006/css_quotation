@@ -86,7 +86,8 @@ export default function Dashboard() {
 
   const filteredQuotations = quotations.filter(q => 
     (q.clientName && q.clientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.quotationNo && q.quotationNo.toLowerCase().includes(searchTerm.toLowerCase()))
+    (q.quotationNo && q.quotationNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (q.data?.receiver?.phone && q.data.receiver.phone.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -119,7 +120,7 @@ export default function Dashboard() {
                 <input 
                   type="text" 
                   placeholder="Search quotations..." 
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />

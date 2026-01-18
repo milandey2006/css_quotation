@@ -24,7 +24,7 @@ function CreateQuotationContent() {
     sender: {
       name: "Champion Security System",
       address: "Office-21 A Gr Floor, New Apollo Estate Old Nagardas Road, Andheri East Mumbai 400069",
-      phone: "8080808109",
+      phone: "8080808109/8080806288",
       email: "info@championsecuritysystem.com", 
       pan: "",
       signatory: "Authorized Signatory"
@@ -105,7 +105,7 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
   const addItem = () => {
     setData(prev => ({
       ...prev,
-      items: [{ description: "", make: "", qty: 1, price: 0, gst: 18, image: "", hsn: "" }, ...prev.items]
+      items: [...prev.items, { description: "", make: "", qty: 1, price: 0, gst: 18, image: "", hsn: "" }]
     }));
   };
 
@@ -213,6 +213,10 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
       return <div className="min-h-screen flex items-center justify-center">Loading Quotation...</div>;
   }
 
+  const handleReorderItems = (newItems) => {
+    setData(prev => ({ ...prev, items: newItems }));
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden select-none print:min-h-0 print:h-auto print:overflow-visible print:block print:bg-white">
       {/* Left Panel - Editor */}
@@ -225,6 +229,7 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
           onChange={handleDeepChange}
           onAddItem={addItem}
           onRemoveItem={removeItem}
+          onReorderItems={handleReorderItems}
           onItemChange={handleItemChange}
           onSave={handleSave}
           isSaving={isSaving}

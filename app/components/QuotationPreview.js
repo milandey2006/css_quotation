@@ -29,9 +29,9 @@ const QuotationPreview = ({ data }) => {
   // 1. We assume text wraps very quickly (every 34 chars)
   const MAX_CHARS_PER_LINE = 34; 
   
-  // 2. Increased limits to fill more space per page
-  const PAGE_1_LIMIT = 32; 
-  const PAGE_N_LIMIT = 45;
+  // 2. Balanced limits to prevent overflow while minimizing gaps
+  const PAGE_1_LIMIT = 18; 
+  const PAGE_N_LIMIT = 30;
   const FOOTER_WEIGHT = 6; 
 
   const getItemWeight = (description = '') => {
@@ -42,8 +42,8 @@ const QuotationPreview = ({ data }) => {
     // We take the larger of the two estimates
     const totalLines = Math.max(rawLines, wrappingLines);
     
-    // Reduced multiplier from 0.85 to 0.60 to pack more items per page
-    return 1 + ((totalLines - 1) * 0.60); 
+    // Balanced multiplier to prevent overflow
+    return 1 + ((totalLines - 1) * 0.75); 
   };
 
   const pages = [];

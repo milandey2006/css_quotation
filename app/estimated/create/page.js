@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import EstimatedPreview from '../../components/EstimatedPreview';
 import { Menu, Plus, Trash2, Printer, Save, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 
-export default function EstimatedPage() {
+function CreateEstimateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
@@ -360,5 +360,13 @@ export default function EstimatedPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function EstimatedPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <CreateEstimateForm />
+    </Suspense>
   );
 }

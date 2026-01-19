@@ -79,7 +79,7 @@ const QuotationPreview = ({ data }) => {
 
                   currentPage.push({
                       ...item, description: part1Desc + " ",
-                    price: 0, qty: '', gst: '', make: item.make, 
+                    price: 0, qty: '', gst: '', hsn: item.hsn, make: item.make, 
                       _sr: item._sr, isPartial: true
                   });
                   
@@ -216,7 +216,8 @@ const QuotationPreview = ({ data }) => {
                         <tr className="border-y border-slate-500 bg-slate-50 text-slate-900">
                             <th className="w-10 py-2 border-r border-slate-300 text-center font-bold">Sr.n</th>
                             <th className="px-3 py-2 border-r border-slate-300 text-left font-bold">Particulars</th>
-                            {safeData.showImages && <th className="w-20 py-2 border-r border-slate-300 text-center font-bold">Image</th>}
+                            {safeData.showImages && safeData.type !== 'Proforma' && <th className="w-20 py-2 border-r border-slate-300 text-center font-bold">Image</th>}
+                            {safeData.type === 'Proforma' && <th className="w-16 py-2 border-r border-slate-300 text-center font-bold">HSN/SAC</th>}
 
                             <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">QTY</th>
                             <th className="w-20 py-2 border-r border-slate-300 text-right px-2 font-bold">Rate</th>
@@ -232,7 +233,7 @@ const QuotationPreview = ({ data }) => {
                                     <td className="px-3 py-2 border-r border-slate-200 text-slate-800 text-left align-top">
                                         <div className="whitespace-pre-wrap">{item.description}</div>
                                     </td>
-                                    {safeData.showImages && (
+                                    {safeData.showImages && safeData.type !== 'Proforma' && (
                                         <td className="w-20 border-r border-slate-200 p-1 align-middle">
                                             <div className="flex justify-center items-center h-full">
                                                 {item.image ? (
@@ -241,6 +242,7 @@ const QuotationPreview = ({ data }) => {
                                             </div>
                                         </td>
                                     )}
+                                    {safeData.type === 'Proforma' && <td className="w-16 py-2 border-r border-slate-200 text-center text-slate-800 px-1 align-top">{item.hsn || '-'}</td>}
 
                                     <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 font-semibold align-top">{item.qty === '' ? '' : item.qty}</td>
                                     <td className="w-20 py-2 border-r border-slate-200 text-right text-slate-800 px-2 align-top">{item.qty === '' ? '' : (item.price || 0).toLocaleString('en-IN')}</td>
@@ -254,7 +256,8 @@ const QuotationPreview = ({ data }) => {
                         <tr className="h-full">
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>
-                            {safeData.showImages && <td className="border-r border-slate-200"></td>}
+                            {safeData.showImages && safeData.type !== 'Proforma' && <td className="border-r border-slate-200"></td>}
+                            {safeData.type === 'Proforma' && <td className="border-r border-slate-200"></td>}
 
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>

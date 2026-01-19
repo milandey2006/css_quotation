@@ -328,11 +328,17 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
                               onChange={(e) => onItemChange(index, 'image', e.target.value)}
                               className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                             />
-                            <div className="grid grid-cols-1 gap-3">
+                            <div className="grid grid-cols-2 gap-3">
                                 <input
                                     placeholder="Make"
                                     value={item.make}
                                     onChange={(e) => onItemChange(index, 'make', e.target.value)}
+                                    className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                                />
+                                 <input
+                                    placeholder="HSN/SAC"
+                                    value={item.hsn || ''}
+                                    onChange={(e) => onItemChange(index, 'hsn', e.target.value)}
                                     className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                                 />
                             </div>

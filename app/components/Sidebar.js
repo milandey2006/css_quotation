@@ -9,7 +9,9 @@ import {
   User, 
   LogOut,
   Bell,
-  PieChart
+  PieChart,
+  Table,
+  Clock
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -17,6 +19,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/' },
+    { name: 'Quotation', icon: FileText, href: '/create' },
+    { name: 'Estimated', icon: FileText, href: '/estimated' },
+    { name: 'Worksheet', icon: Table, href: '/worksheet' },
+    { name: 'Attendance', icon: Clock, href: '/attendance' },
+    { name: 'Settings', icon: Settings, href: '/settings' },
   ];
 
   return (

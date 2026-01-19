@@ -273,15 +273,7 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
                  />
                  <label htmlFor="showImages" className="text-sm">Show Item Images</label>
             </div>
-            <div className="flex items-center gap-2">
-                 <input 
-                     type="checkbox" 
-                     checked={data.showHSN} 
-                     onChange={(e) => onChange('meta', 'showHSN', e.target.checked)}
-                     id="showHSN"
-                 />
-                 <label htmlFor="showHSN" className="text-sm">Show HSN/SAC</label>
-            </div>
+
       </div>
 
 
@@ -336,17 +328,11 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
                               onChange={(e) => onItemChange(index, 'image', e.target.value)}
                               className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                             />
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-3">
                                 <input
                                     placeholder="Make"
                                     value={item.make}
                                     onChange={(e) => onItemChange(index, 'make', e.target.value)}
-                                    className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
-                                />
-                                 <input
-                                    placeholder="HSN/SAC"
-                                    value={item.hsn || ''}
-                                    onChange={(e) => onItemChange(index, 'hsn', e.target.value)}
                                     className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                                 />
                             </div>

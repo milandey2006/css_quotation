@@ -26,13 +26,13 @@ const QuotationPreview = ({ data }) => {
 
   // --- STRICT Pagination Logic ---
   
-  // 1. We assume text wraps very quickly (every 34 chars)
-  const MAX_CHARS_PER_LINE = 34; 
+  // 1. We assume text wraps very quickly (every 46 chars)
+  const MAX_CHARS_PER_LINE = 46; 
   
   // 2. Balanced limits to prevent overflow while minimizing gaps
-  const PAGE_1_LIMIT = 18; 
-  const PAGE_N_LIMIT = 30;
-  const FOOTER_WEIGHT = 6; 
+  const PAGE_1_LIMIT = 22; 
+  const PAGE_N_LIMIT = 36;
+  const FOOTER_WEIGHT = 4; 
 
   const getItemWeight = (description = '') => {
     const desc = description || '';
@@ -79,7 +79,7 @@ const QuotationPreview = ({ data }) => {
 
                   currentPage.push({
                       ...item, description: part1Desc + " ",
-                      price: 0, qty: '', gst: '', hsn: item.hsn, make: item.make, 
+                    price: 0, qty: '', gst: '', make: item.make, 
                       _sr: item._sr, isPartial: true
                   });
                   
@@ -217,7 +217,7 @@ const QuotationPreview = ({ data }) => {
                             <th className="w-10 py-2 border-r border-slate-300 text-center font-bold">Sr.n</th>
                             <th className="px-3 py-2 border-r border-slate-300 text-left font-bold">Particulars</th>
                             {safeData.showImages && <th className="w-20 py-2 border-r border-slate-300 text-center font-bold">Image</th>}
-                            {safeData.showHSN !== false && <th className="w-16 py-2 border-r border-slate-300 text-center font-bold">HSN/SAC</th>}
+
                             <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">QTY</th>
                             <th className="w-20 py-2 border-r border-slate-300 text-right px-2 font-bold">Rate</th>
                             <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">GST %</th>
@@ -241,7 +241,7 @@ const QuotationPreview = ({ data }) => {
                                             </div>
                                         </td>
                                     )}
-                                    {safeData.showHSN !== false && <td className="w-16 py-2 border-r border-slate-200 text-center text-slate-800 px-1 align-top">{item.hsn || '-'}</td>}
+
                                     <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 font-semibold align-top">{item.qty === '' ? '' : item.qty}</td>
                                     <td className="w-20 py-2 border-r border-slate-200 text-right text-slate-800 px-2 align-top">{item.qty === '' ? '' : (item.price || 0).toLocaleString('en-IN')}</td>
                                     <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 align-top">{item.qty === '' ? '' : `${item.gst}%`}</td>
@@ -255,7 +255,7 @@ const QuotationPreview = ({ data }) => {
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>
                             {safeData.showImages && <td className="border-r border-slate-200"></td>}
-                            {safeData.showHSN !== false && <td className="border-r border-slate-200"></td>}
+
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>

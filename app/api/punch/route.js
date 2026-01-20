@@ -7,7 +7,7 @@ import { desc } from 'drizzle-orm';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { employeeId, clientName, areaName, type, location } = body;
+    const { employeeId, clientName, areaName, type, location, workDetails } = body;
 
     if (!employeeId || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -18,6 +18,7 @@ export async function POST(request) {
       clientName: clientName || '',
       areaName: areaName || '',
       type,
+      workDetails: workDetails || '',
       lat: String(location?.lat || ''),
       lng: String(location?.lng || ''),
       timestamp: new Date(),

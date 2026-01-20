@@ -51,6 +51,7 @@ export default function AttendancePage() {
           employeeId: record.employeeId,
           clientName: record.clientName || '-', // Capture from record
           areaName: record.areaName || '-',     // Capture from record
+          workDetails: record.workDetails || '-', // Capture from record
           punches: [],
           firstIn: null,
           lastOut: null,
@@ -208,6 +209,7 @@ export default function AttendancePage() {
                     <th className="px-6 py-4">Employee</th>
                     <th className="px-6 py-4">Client</th>
                     <th className="px-6 py-4">Area</th>
+                    <th className="px-6 py-4">Work Details</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">In Time</th>
                     <th className="px-6 py-4">Out Time</th>
@@ -223,6 +225,7 @@ export default function AttendancePage() {
                         <td className="px-6 py-4 font-medium text-slate-900">{row.employeeId}</td>
                         <td className="px-6 py-4 text-slate-600">{row.clientName}</td>
                         <td className="px-6 py-4 text-slate-600">{row.areaName}</td>
+                        <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={row.workDetails}>{row.workDetails}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                             row.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :

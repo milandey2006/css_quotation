@@ -6,7 +6,6 @@ import { MapPin, CheckCircle, AlertCircle, Clock, Smartphone } from 'lucide-reac
 export default function PunchPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [clientName, setClientName] = useState('');
-  const [areaName, setAreaName] = useState('');
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);
@@ -54,6 +53,7 @@ export default function PunchPage() {
         employeeId,
         clientName,
         areaName,
+        workDetails,
         type, 
         location: { lat, lng }
       };
@@ -137,6 +137,17 @@ export default function PunchPage() {
                onChange={(e) => setAreaName(e.target.value)}
                placeholder="e.g. Building A"
                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg"
+             />
+          </div>
+
+          <div>
+             <label className="block text-slate-400 text-sm font-medium mb-2">Work Details</label>
+             <textarea 
+               rows="2"
+               value={workDetails}
+               onChange={(e) => setWorkDetails(e.target.value)}
+               placeholder="Describe work done..."
+               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg resize-none"
              />
           </div>
 

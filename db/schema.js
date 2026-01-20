@@ -33,5 +33,6 @@ export const punches = pgTable('punches', {
   timestamp: timestamp('timestamp').defaultNow().notNull(),
   lat: text('lat'), // text to be safe with precision, or real/double precision if supported by driver easily
   lng: text('lng'),
+  workDetails: text('work_details'),
   createdAt: timestamp('created_at').defaultNow(),
 });

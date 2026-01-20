@@ -11,7 +11,8 @@ import {
   Bell,
   PieChart,
   Table,
-  Clock
+  Clock,
+  Briefcase
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -23,6 +24,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Estimated', icon: FileText, href: '/estimated' },
     { name: 'Worksheet', icon: Table, href: '/worksheet' },
     { name: 'Attendance', icon: Clock, href: '/attendance' },
+    { name: 'Work List', icon: Briefcase, href: '/works' },
+    { name: 'Assign Work', icon: User, href: '/works/create' },
     { name: 'Settings', icon: Settings, href: '/settings' },
   ];
 

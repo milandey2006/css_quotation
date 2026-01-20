@@ -36,3 +36,13 @@ export const punches = pgTable('punches', {
   workDetails: text('work_details'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const works = pgTable('works', {
+  id: serial('id').primaryKey(),
+  clientName: text('client_name').notNull(),
+  clientPhone: text('client_phone'),
+  clientAddress: text('client_address'),
+  instructions: text('instructions'),
+  status: text('status').default('pending'), // pending, completed
+  createdAt: timestamp('created_at').defaultNow(),
+});

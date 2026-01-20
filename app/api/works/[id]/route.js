@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { status } = body;
 
@@ -32,7 +32,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
-        const { id } = params;
+        const { id } = await params;
         await db.delete(works).where(eq(works.id, parseInt(id)));
         return NextResponse.json({ message: 'Deleted successfully' });
     } catch (error) {

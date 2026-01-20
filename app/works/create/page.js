@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
-import { Menu, Save, Briefcase, MapPin, Phone, User } from 'lucide-react';
+import { Menu, Save, Briefcase, MapPin, Phone, User, Mic, MicOff } from 'lucide-react';
 
 export default function CreateWorkPage() {
   const router = useRouter();
@@ -15,6 +15,72 @@ export default function CreateWorkPage() {
     instructions: ''
   });
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
+  const [isListening, setIsListening] = useState(null); // 'address', 'instructions', or null
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+    };
+  }, []);
+
+  const handleVoiceInput = (field) => {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition is not supported in this browser. Please use Chrome.");
+        return;
+    }
+
+    if (isListening) {
+        // Stop listening if already listening
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        setIsListening(null);
+        return;
+    }
+
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN'; // Default to Indian English
+
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+        setIsListening(field);
+    };
+
+    recognition.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            }
+        }
+        
+        if (finalTranscript) {
+            setFormData(prev => ({
+                ...prev,
+                [field]: (prev[field] ? prev[field] + ' ' : '') + finalTranscript
+            }));
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(null);
+        recognitionRef.current = null;
+    };
+
+    recognition.onend = () => {
+        setIsListening(null);
+        recognitionRef.current = null;
+    };
+
+    recognition.start();
+  };
 
   const handleSave = async () => {
     if (!formData.clientName.trim()) {
@@ -97,7 +163,7 @@ export default function CreateWorkPage() {
                                 value={formData.clientName}
                                 onChange={(e) => setFormData({...formData, clientName: e.target.value})}
                                 placeholder="e.g. Acme Innovations"
-                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                className="w-full pl-10 pr-4 py-3 text-black     bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             />
                         </div>
                     </div>
@@ -112,7 +178,7 @@ export default function CreateWorkPage() {
                                 value={formData.clientPhone}
                                 onChange={(e) => setFormData({...formData, clientPhone: e.target.value})}
                                 placeholder="e.g. 9876543210"
-                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                className="w-full pl-10 pr-4 py-3 text-black bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             />
                         </div>
                     </div>
@@ -127,21 +193,45 @@ export default function CreateWorkPage() {
                                 value={formData.clientAddress}
                                 onChange={(e) => setFormData({...formData, clientAddress: e.target.value})}
                                 placeholder="e.g. 123 Industrial Estate, Mumbai"
-                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                                className="w-full pl-10 pr-12 py-3 text-black bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
                             />
+                            <button
+                                onClick={() => handleVoiceInput('clientAddress')}
+                                className={`absolute right-3 top-3 p-1.5 rounded-full transition-all ${
+                                    isListening === 'clientAddress' 
+                                    ? 'bg-red-100 text-red-600 animate-pulse' 
+                                    : 'hover:bg-slate-200 text-slate-400 hover:text-blue-600'
+                                }`}
+                                title="Speech to Text"
+                            >
+                                {isListening === 'clientAddress' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                            </button>
                         </div>
                     </div>
 
                     {/* Instructions */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Work Description / Instructions</label>
-                        <textarea 
-                            rows={4}
-                            value={formData.instructions}
-                            onChange={(e) => setFormData({...formData, instructions: e.target.value})}
-                            placeholder="Describe what needs to be done..."
-                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                        />
+                        <div className="relative">
+                            <textarea 
+                                rows={4}
+                                value={formData.instructions}
+                                onChange={(e) => setFormData({...formData, instructions: e.target.value})}
+                                placeholder="Describe what needs to be done..."
+                                className="w-full p-4 pr-12 text-black bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                            />
+                             <button
+                                onClick={() => handleVoiceInput('instructions')}
+                                className={`absolute right-3 top-3 p-1.5 rounded-full transition-all ${
+                                    isListening === 'instructions' 
+                                    ? 'bg-red-100 text-red-600 animate-pulse' 
+                                    : 'hover:bg-slate-200 text-slate-400 hover:text-blue-600'
+                                }`}
+                                title="Speech to Text"
+                            >
+                                {isListening === 'instructions' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

@@ -6,6 +6,8 @@ import { MapPin, CheckCircle, AlertCircle, Clock, Smartphone } from 'lucide-reac
 export default function PunchPage() {
   const [employeeId, setEmployeeId] = useState('');
   const [clientName, setClientName] = useState('');
+  const [areaName, setAreaName] = useState('');
+  const [workDetails, setWorkDetails] = useState('');
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);

@@ -342,7 +342,6 @@ const QuotationPreview = ({ data }) => {
                         <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-15 object-contain" />
                         <img src="https://www.secomp.fr/thumbor/o7rRmg8K9vuWJVwmE2VThnpQivM=/filters:cachevalid(2022-09-23T12:17:17.716683):strip_icc():strip_exif()/cms_secde/cms/ueber_uns/markenwelt/hersteller_logos/i-pro_logo_rgb_blue.png" alt="Panasonic" className="h-10 object-contain" />
                         <img src="https://www.matrixcomsec.com/products/wp-content/uploads/2022/01/Matrix-ComSec_Logo1new.png" alt="Matrix" className="h-10 object-contain" />
-                        <img src="https://logo.clearbit.com/trassir.com" alt="Trassir" className="h-10 object-contain" />
                         <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnzwl-53GN5z4FI3ITAH6aA946jNx65kaU_Q&s" alt="Hanwha" className="h-10 object-contain" />
                         <img src="https://www.actility.com/wp-content/uploads/2024/12/Milesight-logo.png" alt="Milesight" className="h-10 object-contain" />
                         <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-20 object-contain" />

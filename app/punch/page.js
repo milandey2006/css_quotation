@@ -48,26 +48,27 @@ export default function PunchPage() {
     );
   };
 
-  const savePunch = (type, lat, lng) => {
+  const savePunch = async (type, lat, lng) => {
     try {
-      const newPunch = {
-        id: Date.now(),
-        employeeId: employeeId,
-        clientName: clientName,
-        areaName: areaName,
-        type: type, // 'in' or 'out'
-        timestamp: new Date().toISOString(),
-        location: { lat, lng },
-        // Create a Google Maps link
-        mapLink: `https://www.google.com/maps?q=${lat},${lng}`
+      const payload = {
+        employeeId,
+        clientName,
+        areaName,
+        type, 
+        location: { lat, lng }
       };
 
-      // Get existing data
-      const existingData = JSON.parse(localStorage.getItem('attendanceData') || '[]');
-      const updatedData = [...existingData, newPunch];
-      
-      // Save back
-      localStorage.setItem('attendanceData', JSON.stringify(updatedData));
+      const response = await fetch('/api/punch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save punch');
+      }
 
       setStatus('success');
       setMessage(`Successfully Punched ${type === 'in' ? 'IN' : 'OUT'} at ${new Date().toLocaleTimeString()}`);
@@ -77,7 +78,7 @@ export default function PunchPage() {
     } catch (err) {
       console.error(err);
       setStatus('error');
-      setMessage('Failed to save data locally.');
+      setMessage('Failed to save data to server.');
     }
   };
 

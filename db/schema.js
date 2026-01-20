@@ -21,4 +21,17 @@ export const proformas = pgTable('proformas', {
   status: text('status').default('pending'),
   data: jsonb('data').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const punches = pgTable('punches', {
+  id: serial('id').primaryKey(),
+  employeeId: text('employee_id').notNull(),
+  clientName: text('client_name'),
+  areaName: text('area_name'),
+  type: text('type').notNull(), // 'in' or 'out'
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+  lat: text('lat'), // text to be safe with precision, or real/double precision if supported by driver easily
+  lng: text('lng'),
+  createdAt: timestamp('created_at').defaultNow(),
 });

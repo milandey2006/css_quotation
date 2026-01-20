@@ -13,9 +13,16 @@ export default function AttendancePage() {
 
   // Load Data
   useEffect(() => {
-    const loadData = () => {
-      const data = JSON.parse(localStorage.getItem('attendanceData') || '[]');
-      setAttendanceData(data);
+    const loadData = async () => {
+      try {
+        const response = await fetch('/api/punch');
+        if (response.ok) {
+          const data = await response.json();
+          setAttendanceData(data);
+        }
+      } catch (error) {
+        console.error("Failed to load attendance", error);
+      }
     };
     loadData();
     // Refresh every 30s to see new punches in real-time-ish
@@ -148,8 +155,10 @@ export default function AttendancePage() {
             
             <button 
               onClick={() => {
-                const data = JSON.parse(localStorage.getItem('attendanceData') || '[]');
-                setAttendanceData(data);
+                fetch('/api/punch')
+                  .then(res => res.json())
+                  .then(data => setAttendanceData(data))
+                  .catch(err => console.error(err));
               }}
               className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
             >

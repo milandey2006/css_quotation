@@ -2,9 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, CheckCircle, AlertCircle, Clock, Smartphone } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 export default function PunchPage() {
+  const { user, isLoaded } = useUser();
   const [employeeId, setEmployeeId] = useState('');
+  
+  // Auto-fill name when user is loaded
+  useEffect(() => {
+    if (isLoaded && user) {
+        setEmployeeId(user.fullName || user.firstName || '');
+    }
+  }, [isLoaded, user]);
+
   const [clientName, setClientName] = useState('');
   const [areaName, setAreaName] = useState('');
   const [workDetails, setWorkDetails] = useState('');

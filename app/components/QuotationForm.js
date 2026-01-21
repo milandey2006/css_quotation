@@ -57,6 +57,7 @@ function SortableItem(props) {
 }
 
 const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, onSave, isSaving, isEditMode, onShare, onReorderItems }) => {
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
         activationConstraint: {

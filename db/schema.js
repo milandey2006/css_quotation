@@ -43,6 +43,7 @@ export const works = pgTable('works', {
   clientPhone: text('client_phone'),
   clientAddress: text('client_address'),
   instructions: text('instructions'),
+  userId: text('user_id'), // Clerk User ID
   status: text('status').default('pending'), // pending, completed
   createdAt: timestamp('created_at').defaultNow(),
 });

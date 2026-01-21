@@ -15,19 +15,32 @@ import {
   Briefcase
 } from 'lucide-react';
 
+import { UserButton, useUser } from "@clerk/nextjs";
+
 const Sidebar = ({ isOpen, onClose }) => {
   const pathname = usePathname();
+  const { user, isLoaded } = useUser();
+  const role = user?.publicMetadata?.role; // 'admin' or undefined/other
 
-  const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, href: '/' },
-    { name: 'Quotation', icon: FileText, href: '/create' },
-    { name: 'Estimated', icon: FileText, href: '/estimated' },
-    { name: 'Worksheet', icon: Table, href: '/worksheet' },
-    { name: 'Attendance', icon: Clock, href: '/attendance' },
-    { name: 'Work List', icon: Briefcase, href: '/works' },
-    { name: 'Assign Work', icon: User, href: '/works/create' },
-    { name: 'Settings', icon: Settings, href: '/settings' },
+  // Define menu items with visibility logic
+  // Define menu items with visibility logic
+  const allMenuItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, href: '/', roles: ['admin'] },
+    { name: 'Quotation', icon: FileText, href: '/create', roles: ['admin'] },
+    { name: 'Estimated', icon: FileText, href: '/estimated', roles: ['admin'] },
+    { name: 'Worksheet', icon: Table, href: '/worksheet', roles: ['admin'] },
+    { name: 'Attendance', icon: Clock, href: '/attendance', roles: ['admin'] }, // Admin only
+    { name: 'Punch In/Out', icon: Clock, href: '/punch', roles: ['user'] }, // User only
+    { name: 'Work List', icon: Briefcase, href: '/works', roles: ['admin', 'user'] },
+    { name: 'Assign Work', icon: User, href: '/works/create', roles: ['admin'] },
+    { name: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },
   ];
+
+  // Filter based on role
+  // If role is NOT 'admin', assume 'user'
+  const currentRole = role === 'admin' ? 'admin' : 'user';
+
+  const menuItems = allMenuItems.filter(item => item.roles.includes(currentRole));
 
   return (
     <>
@@ -47,11 +60,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
 
-                <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-3xl font-bold mb-4 shadow-lg ring-4 ring-blue-500/20">
-                CSS
+                <div className="mb-4 scale-125">
+                    <UserButton />
                 </div>
-                <h2 className="text-lg font-bold tracking-wide">Champion Security</h2>
-                <p className="text-xs text-slate-400 mt-1">admin@champion.com</p>
+                <h2 className="text-lg font-bold tracking-wide text-center">{user?.fullName || 'User'}</h2>
+                <div className="mt-1 px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-700 text-slate-300 border border-slate-600">
+                    {currentRole}
+                </div>
             </div>
 
             {/* Navigation */}
@@ -75,14 +90,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                 );
                 })}
             </nav>
-
-            {/* Logout */}
-            <div className="p-4 border-t border-slate-700/50">
-                <button className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl w-full transition-all">
-                    <LogOut className="w-5 h-5" />
-                    <span className="font-medium">Logout</span>
-                </button>
-            </div>
         </div>
     </>
   );

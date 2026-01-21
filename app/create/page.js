@@ -55,7 +55,10 @@ Payment Terms: 70% Advance with Confirmed Order and 30% After completion of Work
 Validity Of Quote : 10 days from date of Quote
 Our responsibility ceases the moment the good leave our premises and no claim of breakage, etc would be accepted.
 Completion of work will be in 7days
-Scope of Client :- customer will providing ladder and etc for working accessories proper power source to the equipments, Civil, Carpentry, Fabrication work is in the scope of client`
+Scope of Client :- customer will providing ladder and etc for working accessories proper power source to the equipments, Civil, Carpentry, Fabrication work is in the scope of client
+Complain will be received by Email:- <a href="mailto:info@championsecuritysystem.com" class="text-blue-600 underline">info@championsecuritysystem.com</a> with detail (like camera number, place etc).
+Time:- 10:30am To 6:30pm
+Service will be provided in 24 to 48 hours after call received by Authorized Person`
   });
 
   // Fetch existing data if ID is present
@@ -63,7 +66,7 @@ Scope of Client :- customer will providing ladder and etc for working accessorie
     if (id) {
         setLoading(true);
         const searchParams = new URLSearchParams(window.location.search);
-        const type = searchParams.get('type');
+        const type = searchParams.get('type');  
         const endpoint = type === 'Proforma' ? `/api/proformas/${id}` : `/api/quotations/${id}`;
         
         fetch(endpoint)

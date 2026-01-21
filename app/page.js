@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import Sidebar from './components/Sidebar';
 import { DashboardStats } from './components/DashboardStats';
 import { DashboardCharts } from './components/DashboardCharts';
@@ -23,9 +25,20 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('Quotations'); // 'Quotations' | 'Proformas'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const { user, isLoaded } = useUser(); // Get user role
+  const router = useRouter(); // For redirect
+
   useEffect(() => {
-    fetchDocuments();
-  }, [activeTab]);
+    if (isLoaded) {
+        const role = user?.publicMetadata?.role;
+        // If user is NOT admin, redirect to works
+        if (role !== 'admin') {
+            router.push('/works');
+        } else {
+            fetchDocuments(); // Only fetch if admin
+        }
+    }
+  }, [activeTab, isLoaded, user, router]);
 
   const fetchDocuments = async () => {
     setLoading(true);

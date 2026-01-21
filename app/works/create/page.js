@@ -12,7 +12,7 @@ export default function CreateWorkPage() {
     clientName: '',
     clientPhone: '',
     clientAddress: '',
-    instructions: ''
+    instructions: '',
   });
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [isListening, setIsListening] = useState(null); // 'address', 'instructions', or null
@@ -153,17 +153,19 @@ export default function CreateWorkPage() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6 space-y-6">
                     
+
+
                     {/* Client Name */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Client Name</label>
                         <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                             <input 
                                 type="text"
                                 value={formData.clientName}
                                 onChange={(e) => setFormData({...formData, clientName: e.target.value})}
                                 placeholder="e.g. Acme Innovations"
-                                className="w-full pl-10 pr-4 py-3 text-black     bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                className="w-full pl-10 pr-4 py-3 text-black bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             />
                         </div>
                     </div>

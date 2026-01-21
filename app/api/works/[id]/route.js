@@ -8,14 +8,19 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status, userId } = body; // Accept userId update
 
-    if (!status) {
-      return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+    // Allow updating status, userId, or both
+    if (!status && userId === undefined) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (userId !== undefined) updateData.userId = userId; // Allow clearing assignment (null)
+
     const updated = await db.update(works)
-      .set({ status })
+      .set(updateData)
       .where(eq(works.id, parseInt(id)))
       .returning();
 
@@ -32,6 +37,17 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
+        const { userId } = await auth();
+        if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const client = await clerkClient();
+        const currentUser = await client.users.getUser(userId);
+        const isAdmin = currentUser.publicMetadata?.role === 'admin';
+
+        if (!isAdmin) {
+             return NextResponse.json({ error: 'Forbidden. Only admins can delete work.' }, { status: 403 });
+        }
+
         const { id } = await params;
         await db.delete(works).where(eq(works.id, parseInt(id)));
         return NextResponse.json({ message: 'Deleted successfully' });

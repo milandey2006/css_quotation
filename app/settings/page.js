@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user, isLoaded } = useUser();
@@ -93,8 +94,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out z-40 bg-white shadow-xl md:shadow-none w-64 border-r border-slate-200`}>
-        <Sidebar activePage="Settings" />
+      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-40 bg-white shadow-xl md:shadow-none ${isSidebarCollapsed ? 'w-20' : 'w-64'} border-r border-slate-200`}>
+        <Sidebar 
+            activePage="Settings" 
+            onClose={() => setIsMobileMenuOpen(false)}
+            isCollapsed={isSidebarCollapsed}
+            toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
       </div>
       
        {/* Overlay */}
@@ -106,7 +112,7 @@ export default function SettingsPage() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto">
+      <main className={`flex-1 p-4 md:p-8 overflow-y-auto ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-4xl mx-auto">
             
             <div className="mb-8">

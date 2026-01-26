@@ -179,7 +179,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
   };
 
   // --- Resizable Logic ---
-  const [sidebarWidth, setSidebarWidth] = useState(400); // Default px width
+  const [sidebarWidth, setSidebarWidth] = useState(600); // Default px width
   const [isResizing, setIsResizing] = useState(false);
 
   const startResizing = React.useCallback((mouseDownEvent) => {

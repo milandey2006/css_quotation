@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('Quotations'); // 'Quotations' | 'Proformas'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const { user, isLoaded } = useUser(); // Get user role
   const router = useRouter(); // For redirect
@@ -135,10 +136,15 @@ export default function Dashboard() {
       </div>
 
       {/* Fixed Sidebar */}
-      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <Sidebar 
+          isOpen={isMobileMenuOpen} 
+          onClose={() => setIsMobileMenuOpen(false)} 
+          isCollapsed={isSidebarCollapsed}
+          toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
 
       {/* Main Content Area */}
-      <main className="min-w-0 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 transition-all duration-300 min-h-screen">
+      <main className={`min-w-0 p-4 md:p-8 pt-20 md:pt-8 transition-all duration-300 min-h-screen ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-7xl mx-auto">
           
           {/* Top Header Section */}

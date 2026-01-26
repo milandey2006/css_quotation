@@ -47,3 +47,55 @@ export const works = pgTable('works', {
   status: text('status').default('pending'), // pending, completed
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const salarySlips = pgTable('salary_slips', {
+  id: serial('id').primaryKey(),
+  employeeName: text('employee_name').notNull(),
+  employeeId: text('employee_id'),
+  designation: text('designation'),
+  monthYear: text('month_year').notNull(), // e.g. "March 2024"
+  
+  // Employee documents
+  aadhaarNo: text('aadhaar_no'),
+  panNo: text('pan_no'),
+  uanNo: text('uan_no'),
+  utrNo: text('utr_no'), // Payment reference
+  
+  // JSONB for flexible earnings/deductions structure
+  earnings: jsonb('earnings'), 
+  deductions: jsonb('deductions'),
+  
+  // Specific requested fields
+  advanceSalary: integer('advance_salary').default(0),
+  basicSalary: integer('basic_salary'),
+  
+  // Totals
+  totalEarnings: integer('total_earnings'),
+  totalDeductions: integer('total_deductions'),
+  netPayable: integer('net_payable'),
+  
+  // Attendance
+  workDays: integer('work_days'),
+  holidays: integer('holidays'),
+  paidDays: integer('paid_days'), 
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const employees = pgTable('employees', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  designation: text('designation'),
+  mobile: text('mobile'),
+  email: text('email'),
+  address: text('address'),
+  panNo: text('pan_no'),
+  aadhaarNo: text('aadhaar_no'),
+  uanNo: text('uan_no'),
+  bankAccountNo: text('bank_account_no'),
+  ifscCode: text('ifsc_code'),
+  joinDate: timestamp('join_date'),
+  basicSalary: integer('basic_salary'),
+  status: text('status').default('active'), // active, inactive
+  createdAt: timestamp('created_at').defaultNow(),
+});

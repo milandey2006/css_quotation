@@ -9,10 +9,11 @@ import Sidebar from '../components/Sidebar';
 const WorksheetPage = () => {
     // Initial data structure
     const [rows, setRows] = useState([
-        { id: 1, date: '', work: '', person: '', client: '', clientNumber: '', startTime: '', endTime: '', location: '', products: '', report: '', status: '', payment: '', remark: '' }
+        { id: 1, date: '', work: '', person: '', client: '', startTime: '', endTime: '', location: '', products: '', report: '', status: '', payment: '', remark: '' }
     ]);
     const [nextId, setNextId] = useState(2);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
@@ -23,8 +24,7 @@ const WorksheetPage = () => {
         { key: 'date', label: 'DATE', type: 'date', width: 'min-w-[130px]' },
         { key: 'work', label: 'WORK DETAILS', type: 'text', width: 'min-w-[180px]' },
         { key: 'person', label: 'ASSIGNED PERSON', type: 'text', width: 'min-w-[140px]' },
-        { key: 'client', label: 'CLIENT', type: 'text', width: 'min-w-[160px]' },
-        { key: 'clientNumber', label: 'CLIENT NO', type: 'text', width: 'min-w-[130px]' },
+        { key: 'client', label: 'CLIENT INFO', type: 'textarea', width: 'min-w-[200px]' },
         { key: 'startTime', label: 'START', type: 'time', width: 'min-w-[100px]' },
         { key: 'endTime', label: 'END', type: 'time', width: 'min-w-[100px]' },
         { key: 'location', label: 'LOCATION', type: 'text', width: 'min-w-[140px]' },
@@ -50,7 +50,11 @@ const WorksheetPage = () => {
                              newRow.endTime = '';
                          }
                          if (row.sn !== undefined) delete newRow.sn; 
-                         if (newRow.clientNumber === undefined) newRow.clientNumber = '';
+                         // Merge clientNumber if exists
+                         if (newRow.clientNumber) {
+                             newRow.client = newRow.client ? `${newRow.client}\n${newRow.clientNumber}` : newRow.clientNumber;
+                             delete newRow.clientNumber;
+                         }
                          return newRow;
                     });
                     setRows(migrated);
@@ -67,7 +71,6 @@ const WorksheetPage = () => {
     const filteredRows = rows.filter(row => {
         const matchesSearch = 
             (row.client?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
-            (row.clientNumber?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
             (row.work?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
             (row.person?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
             (row.products?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
@@ -87,7 +90,7 @@ const WorksheetPage = () => {
     const addRow = () => {
         setRows(prev => [
             ...prev,
-            { id: nextId, date: '', work: '', person: '', client: '', clientNumber: '', startTime: '', endTime: '', location: '', products: '', report: '', status: '', payment: '', remark: '' }
+            { id: nextId, date: '', work: '', person: '', client: '', startTime: '', endTime: '', location: '', products: '', report: '', status: '', payment: '', remark: '' }
         ]);
         setNextId(prev => prev + 1);
     };
@@ -172,10 +175,15 @@ const WorksheetPage = () => {
              </div>
 
              {/* Fixed Sidebar */}
-             <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+             <Sidebar 
+                 isOpen={isMobileMenuOpen} 
+                 onClose={() => setIsMobileMenuOpen(false)} 
+                 isCollapsed={isSidebarCollapsed}
+                 toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+             />
 
             {/* Main Content Area */}
-            <main className="min-w-0 md:ml-64 p-4 md:p-8 pt-20 md:pt-8 transition-all duration-300 min-h-screen">
+            <main className={`min-w-0 p-4 md:p-8 pt-20 md:pt-8 transition-all duration-300 min-h-screen ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
                 {/* Header */}
                 <div className="flex flex-col mb-8">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">

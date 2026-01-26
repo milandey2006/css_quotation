@@ -6,16 +6,53 @@ import Sidebar from '../components/Sidebar';
 import { 
     Plus, Search, Trash2, Edit, FileText, 
     Filter, Calendar, ChevronDown, CheckCircle, 
-    MoreHorizontal, ArrowUpRight, Menu
+    MoreHorizontal, ArrowUpRight, Menu, Printer, X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useReactToPrint } from 'react-to-print';
+import EstimatedPreview from '../components/EstimatedPreview';
 
 export default function EstimatedListPage() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [estimates, setEstimates] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
+
+  const [isPreview, setIsPreview] = useState(false);
+  const [printingEstimate, setPrintingEstimate] = useState(null);
+  const printRef = React.useRef();
+
+  const handlePrint = useReactToPrint({
+      content: () => printRef.current,
+      documentTitle: printingEstimate ? `Estimate_${printingEstimate.billNo.replace(/\//g, '-')}` : 'Estimate',
+      onAfterPrint: () => setPrintingEstimate(null)
+  });
+
+  // Trigger print when estimate is selected and rendered
+  useEffect(() => {
+    if (printingEstimate) {
+        handlePrint();
+    }
+  }, [printingEstimate]);
+
+  const printSingleEstimate = (est) => {
+      setPrintingEstimate(est);
+  };
+
+  // Totals Calculation
+  const calculateTotals = (items) => {
+      return items.reduce((acc, item) => {
+          const total = Number(item.totalAmount || 0);
+          const paid = Number(item.paidAmount || 0);
+          return {
+              total: acc.total + total,
+              paid: acc.paid + paid,
+              balance: acc.balance + (total - paid)
+          };
+      }, { total: 0, paid: 0, balance: 0 });
+  };
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem('estimates') || '[]');
@@ -36,6 +73,8 @@ export default function EstimatedListPage() {
     est.billTo.toLowerCase().includes(searchTerm.toLowerCase()) || 
     est.billNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const totals = calculateTotals(filteredEstimates);
 
   const StatusTab = ({ label, count, active }) => (
       <button 
@@ -60,8 +99,13 @@ export default function EstimatedListPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
        {/* Sidebar */}
-       <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out z-40 bg-white shadow-xl md:shadow-none w-64 border-r border-slate-200`}>
-        <Sidebar activePage="Estimated" />
+       <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-40 bg-white shadow-xl md:shadow-none ${isSidebarCollapsed ? 'w-20' : 'w-64'} border-r border-slate-200`}>
+        <Sidebar 
+            activePage="Estimated" 
+            onClose={() => setIsMobileMenuOpen(false)}
+            isCollapsed={isSidebarCollapsed}
+            toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
       </div>
 
        {/* Overlay */}
@@ -72,52 +116,77 @@ export default function EstimatedListPage() {
         />
       )}
 
-      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
+      <main className={`flex-1 p-4 md:p-8 overflow-y-auto ${isPreview ? 'md:ml-0 bg-white z-50 fixed inset-0' : (isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64')}`}>
+        <div className={`max-w-7xl mx-auto ${isPreview ? 'pt-0' : ''}`}>
             
             {/* Header / Top Bar */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+            <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 ${isPreview ? 'print:hidden' : ''}`}>
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-slate-600">
+                    {!isPreview && <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-slate-600">
                         <Menu className="w-6 h-6" />
-                    </button>
-                    <h1 className="text-2xl font-bold text-slate-800">Estimates</h1>
+                    </button>}
+                    <h1 className="text-2xl font-bold text-slate-800">Estimates {isPreview && 'Report'}</h1>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     {/* Date Range & Filter Mockup */}
-                    <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 cursor-pointer hover:border-slate-300 transition-colors">
-                        <span>All Time</span>
-                        <ChevronDown className="w-4 h-4" />
-                    </div>
-                    
-                    <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-                        <Filter className="w-4 h-4" />
-                        <span>Filter</span>
-                    </button>
+                    {!isPreview && (
+                        <>
+                            <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 cursor-pointer hover:border-slate-300 transition-colors">
+                                <span>All Time</span>
+                                <ChevronDown className="w-4 h-4" />
+                            </div>
+                            
+                            <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+                                <Filter className="w-4 h-4" />
+                                <span>Filter</span>
+                            </button>
 
-                    <Link 
-                        href="/estimated/create" 
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-lg shadow-emerald-600/20 transition-all text-sm font-medium ml-auto md:ml-0"
+                            <Link 
+                                href="/estimated/create" 
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-lg shadow-emerald-600/20 transition-all text-sm font-medium ml-auto md:ml-0"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>New Estimate</span>
+                            </Link>
+                        </>
+                    )}
+
+                    <button 
+                        onClick={() => isPreview ? window.print() : setIsPreview(true)}
+                        className={`flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium transition-colors ${isPreview ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
                     >
-                        <Plus className="w-4 h-4" />
-                        <span>New Estimate</span>
-                    </Link>
+                        <Printer className="w-4 h-4" />
+                        <span>{isPreview ? 'Print Report' : 'Print Preview'}</span>
+                    </button>
+                    
+                    {isPreview && (
+                         <button 
+                            onClick={() => setIsPreview(false)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm font-medium"
+                        >
+                            <X className="w-4 h-4" />
+                            <span>Close</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Status Tabs */}
+            {!isPreview && (
             <div className="bg-white border-b border-slate-200 px-6 flex overflow-x-auto no-scrollbar gap-2 mb-6 rounded-t-xl">
                 <StatusTab label="All" count={estimates.length} active={activeTab === 'All'} />
                 <StatusTab label="Unpaid" count={unpaidCount} active={activeTab === 'Unpaid'} />
                 <StatusTab label="Overdue" count={0} active={activeTab === 'Overdue'} />
                 <StatusTab label="Paid" count={paidCount} active={activeTab === 'Paid'} />
             </div>
+            )}
 
             {/* Main Content Area */}
             <div className="space-y-4">
                 
                 {/* Search Bar Row - Styled like reference */}
+                {!isPreview && (
                 <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
                     <div className="relative flex-1 max-w-lg">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -131,9 +200,10 @@ export default function EstimatedListPage() {
                     </div>
                     {/* Add grid/list toggles or other controls here if needed */}
                 </div>
+                )}
 
                 {/* Table */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm ${isPreview ? 'border-none shadow-none' : ''}`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
@@ -199,7 +269,15 @@ export default function EstimatedListPage() {
                                                  </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
+                                                {!isPreview && (
                                                 <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={() => printSingleEstimate(est)}
+                                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                        title="Print"
+                                                    >
+                                                        <Printer className="w-4 h-4" />
+                                                    </button>
                                                     <button 
                                                         onClick={() => router.push(`/estimated/create?id=${est.id}`)} 
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -215,6 +293,7 @@ export default function EstimatedListPage() {
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
+                                                )}
                                             </td>
                                         </tr>
                                     );
@@ -239,6 +318,7 @@ export default function EstimatedListPage() {
                 </div>
 
                 {/* Footer / Pagination Mockup */}
+                {!isPreview && (
                 <div className="flex justify-between items-center text-xs text-slate-500 px-2">
                     <p>Showing {filteredEstimates.length} results</p>
                     <div className="flex gap-2">
@@ -246,6 +326,58 @@ export default function EstimatedListPage() {
                          <button className="px-3 py-1 border rounded hover:bg-slate-50 disabled:opacity-50" disabled>Next</button>
                     </div>
                 </div>
+                )}
+                
+                {/* Print/Preview Footer with Totals */}
+                <div className={`mt-8 border-t-2 border-slate-300 pt-4 flex justify-end gap-8 text-black print:flex ${isPreview ? 'flex' : 'hidden'}`}>
+                    <div className="text-right">
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Total Quote</p>
+                        <p className="text-xl font-bold font-mono">₹{totals.total.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="text-right">
+                         <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Total Received</p>
+                        <p className="text-xl font-bold font-mono text-emerald-600">₹{totals.paid.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="text-right">
+                         <p className="text-xs text-slate-500 font-bold uppercase tracking-wide">Balance Due</p>
+                        <p className="text-xl font-bold font-mono text-red-600">₹{totals.balance.toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+                
+                {/* Sticky Footer for Totals - Always Visible when not in preview for quick view */}
+                {!isPreview && (
+                     <div className="fixed bottom-0 left-0 right-0 md:ml-64 bg-white border-t border-slate-200 p-4 shadow-lg z-30 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="text-sm font-medium text-slate-500 hidden md:block">
+                            Summary of visible estimates
+                        </div>
+                        <div className="flex gap-6 text-sm w-full md:w-auto justify-between md:justify-end">
+                            <div>
+                                <span className="text-slate-500 mr-2">Quote:</span>
+                                <span className="font-bold text-slate-900">₹{totals.total.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div>
+                                <span className="text-slate-500 mr-2">Paid:</span>
+                                <span className="font-bold text-emerald-600">₹{totals.paid.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                                <span className="text-red-600 mr-2 font-medium">Due:</span>
+                                <span className="font-bold text-red-700">₹{totals.balance.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Print Padding */}
+                <div className="pb-24"></div> 
+            
+            {/* Hidden Print Component */}
+            <div style={{ height: 0, overflow: 'hidden' }}>
+                <div ref={printRef}>
+                    {printingEstimate && (
+                        <EstimatedPreview data={printingEstimate} showGst={printingEstimate.showGst} />
+                    )}
+                </div>
+            </div>
 
             </div>
         </div>

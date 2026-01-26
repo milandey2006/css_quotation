@@ -8,17 +8,14 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, userId, clientName, clientPhone, clientAddress, instructions } = body; // Accept all editable fields
-
+    const { status, userId, clientName, clientPhone, clientAddress, instructions } = body; 
+    
     // Allow updating any of the fields
-    if (!status && userId === undefined && !clientName && !clientPhone && !clientAddress && !instructions) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
-    }
+    // (Simplified check or just proceed building updateData)
 
     const updateData = {};
     if (status) updateData.status = status;
     if (userId !== undefined) updateData.userId = userId;
-    // Add new editable fields
     if (clientName) updateData.clientName = clientName;
     if (clientPhone) updateData.clientPhone = clientPhone;
     if (clientAddress) updateData.clientAddress = clientAddress;

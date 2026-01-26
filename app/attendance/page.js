@@ -2,14 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, MapPin, RefreshCw, Calendar, Search } from 'lucide-react';
+import { Menu, MapPin, RefreshCw, Calendar, Search, Trash2, FileDown } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function AttendancePage() {
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.role === 'admin';
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [attendanceData, setAttendanceData] = useState([]);
   const [processedRows, setProcessedRows] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  
+  // Report State
+  const [reportStartDate, setReportStartDate] = useState('');
+  const [reportEndDate, setReportEndDate] = useState('');
+  const [reportEmployeeName, setReportEmployeeName] = useState('');
 
   // Load Data
   useEffect(() => {
@@ -105,10 +116,13 @@ export default function AttendancePage() {
 
   // Filtering
   const filteredRows = processedRows.filter(row => {
-    const matchesSearch = row.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = (
+        row.employeeId.toLowerCase().includes(q) ||
+        row.clientName.toLowerCase().includes(q) ||
+        row.areaName.toLowerCase().includes(q)
+    );
     
-    // Convert row.date (e.g., "1/20/2026") to YYYY-MM-DD for comparison if needed
-    // But row.date format depends on locale. Let's compare loosely or use rawDate
     // Simple date string match for now:
     const matchesDate = filterDate ? (() => {
        const selectedDate = new Date(filterDate).toLocaleDateString();
@@ -118,54 +132,199 @@ export default function AttendancePage() {
     return matchesSearch && matchesDate;
   });
 
+  const handleExportReport = () => {
+      console.log("Export button clicked");
+      if (!reportStartDate || !reportEndDate) {
+          alert("Please select both Start Date and End Date for the report.");
+          return;
+      }
+
+      try {
+          const start = new Date(reportStartDate);
+          const end = new Date(reportEndDate);
+          start.setHours(0,0,0,0);
+          end.setHours(23,59,59,999);
+
+          if (start > end) {
+              alert("Start Date cannot be after End Date.");
+              return;
+          }
+
+          console.log(`Filtering from ${start} to ${end}`);
+          console.log("Total processed rows:", processedRows.length);
+
+          // Filter rows for report
+          const reportRows = processedRows.filter(row => {
+              const rowDate = new Date(row.rawDate); // Ensure it is a date
+              const inDateRange = rowDate >= start && rowDate <= end;
+              
+              const nameMatch = reportEmployeeName 
+                ? row.employeeId.toLowerCase().includes(reportEmployeeName.toLowerCase()) 
+                : true;
+
+              return inDateRange && nameMatch;
+          });
+
+          console.log("Rows matching criteria:", reportRows.length);
+
+          if (reportRows.length === 0) {
+              alert("No records found for the selected criteria.");
+              return;
+          }
+
+          // Generate PDF
+          const doc = new jsPDF();
+          console.log("PDF Document created");
+          
+          // Title
+          doc.setFontSize(18);
+          doc.text("Attendance Report", 14, 20);
+          
+          doc.setFontSize(10);
+          doc.text(`Period: ${reportStartDate} to ${reportEndDate}`, 14, 28);
+          if (reportEmployeeName) {
+              doc.text(`Employee: ${reportEmployeeName}`, 14, 33);
+          }
+          doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, reportEmployeeName ? 38 : 33);
+          
+          // Columns
+          const tableColumn = ["Date", "Employee", "Client", "Area", "In Time", "Out Time", "Work Details"];
+          const tableRows = reportRows.map(row => [
+              row.date,
+              row.employeeId,
+              row.clientName,
+              row.areaName,
+              row.startTime,
+              row.endTime,
+              row.workDetails
+          ]);
+
+          autoTable(doc, {
+              head: [tableColumn],
+              body: tableRows,
+              startY: reportEmployeeName ? 45 : 40,
+              styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+              headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+              columnStyles: {
+                  0: { cellWidth: 22 }, // Date
+                  1: { cellWidth: 25 }, // Employee
+                  2: { cellWidth: 30 }, // Client
+                  3: { cellWidth: 25 }, // Area
+                  4: { cellWidth: 20 }, // In
+                  5: { cellWidth: 20 }, // Out
+                  6: { cellWidth: 'auto' } // Details
+              },
+          });
+
+          const fileNameData = reportEmployeeName ? `_${reportEmployeeName.replace(/\s+/g, '_')}` : '';
+          doc.save(`Attendance_Report${fileNameData}_${reportStartDate}_to_${reportEndDate}.pdf`);
+          console.log("PDF saved");
+
+      } catch (err) {
+          console.error("Export Error:", err);
+          alert("An error occurred while exporting the report. Check console for details.");
+      }
+  };
+
+  const handleDelete = async (row) => {
+      if (!confirm(`Are you sure you want to delete attendance for ${row.employeeId} on ${row.date}?`)) return;
+
+      // Delete all punches for this row
+      try {
+          // Identify IDs to delete
+          const punchIds = row.punches.map(p => p.id);
+          
+          await Promise.all(punchIds.map(id => 
+              fetch(`/api/punch/${id}`, { method: 'DELETE' })
+          ));
+
+          // Refresh locally
+          setAttendanceData(prev => prev.filter(p => !punchIds.includes(p.id)));
+          alert('Record deleted successfully');
+
+      } catch (e) {
+          console.error(e);
+          alert('Failed to delete records');
+      }
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50">
-      {/* Mobile Menu Button */}
-      <div className="md:hidden fixed top-4 left-4 z-50">
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 bg-white rounded-lg shadow-md border border-slate-200 text-slate-600 hover:text-blue-600"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+    <div className="flex h-screen bg-slate-50 font-sans">
+       {/* Mobile Menu Button - Consistent Header Style */}
+       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 p-4 z-40 flex justify-between items-center shadow-sm h-16">
+          <div className="font-bold text-slate-800">Champion Security</div>
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+          >
+             <Menu className="w-6 h-6" />
+          </button>
       </div>
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out z-40 bg-white shadow-xl md:shadow-none w-64 border-r border-slate-200`}>
-        <Sidebar activePage="Attendance" />
-      </div>
-      
-      {/* Overlay for mobile */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 z-30 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
-      {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Attendance Log</h1>
-              <p className="text-slate-500 text-sm">Track employee check-ins, locations, and working hours.</p>
+          {/* Header & Report Tools */}
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+               <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Attendance Log</h1>
+                  <p className="text-slate-500 text-sm">Track employee check-ins, locations, and working hours.</p>
+               </div>
+               <button 
+                  onClick={() => {
+                    fetch('/api/punch')
+                      .then(res => res.json())
+                      .then(data => setAttendanceData(data))
+                      .catch(err => console.error(err));
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
             </div>
-            
-            <button 
-              onClick={() => {
-                fetch('/api/punch')
-                  .then(res => res.json())
-                  .then(data => setAttendanceData(data))
-                  .catch(err => console.error(err));
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh Data
-            </button>
+
+            {/* Report Generator Section */}
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col md:flex-row items-end md:items-center gap-4">
+                 <div className="flex-1 w-full md:w-auto">
+                    <label className="block text-xs font-semibold text-blue-800 mb-1 uppercase tracking-wide">Report Start Date</label>
+                    <input 
+                        type="date" 
+                        value={reportStartDate}
+                        onChange={(e) => setReportStartDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                 </div>
+                 <div className="flex-1 w-full md:w-auto">
+                    <label className="block text-xs font-semibold text-blue-800 mb-1 uppercase tracking-wide">Report End Date</label>
+                    <input 
+                        type="date" 
+                        value={reportEndDate}
+                        onChange={(e) => setReportEndDate(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                 </div>
+                 <div className="flex-1 w-full md:w-auto">
+                    <label className="block text-xs font-semibold text-blue-800 mb-1 uppercase tracking-wide">Employee (Optional)</label>
+                    <input 
+                        type="text" 
+                        placeholder="Search Name..."
+                        value={reportEmployeeName}
+                        onChange={(e) => setReportEmployeeName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                 </div>
+                 <button 
+                    onClick={handleExportReport}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md transition-all shadow-blue-200"
+                 >
+                    <FileDown className="w-4 h-4" />
+                    Export PDF
+                 </button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -174,7 +333,7 @@ export default function AttendancePage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                   type="text" 
-                  placeholder="Search by Employee Name..." 
+                  placeholder="Search by Employee, Client, or Area..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -214,7 +373,7 @@ export default function AttendancePage() {
                     <th className="px-6 py-4">In Time</th>
                     <th className="px-6 py-4">Out Time</th>
                     <th className="px-6 py-4">Duration</th>
-                    <th className="px-6 py-4 text-right">Location</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -238,22 +397,32 @@ export default function AttendancePage() {
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.startTime}</td>
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.endTime}</td>
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.hours}</td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right flex justify-end gap-2">
                           <a 
                             href={row.mapLink} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-inline-flex items-center justify-center p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                            className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                             title="View on Map"
                           >
                             <MapPin className="w-4 h-4" />
                           </a>
+                          
+                          {isAdmin && (
+                              <button 
+                                onClick={() => handleDelete(row)}
+                                className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                          )}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="9" className="px-6 py-12 text-center text-slate-400">
+                      <td colSpan="10" className="px-6 py-12 text-center text-slate-400">
                         No attendance records found. Use the Punch App to add entries.
                       </td>
                     </tr>
@@ -262,6 +431,7 @@ export default function AttendancePage() {
               </table>
             </div>
           </div>
+
 
         </div>
       </main>

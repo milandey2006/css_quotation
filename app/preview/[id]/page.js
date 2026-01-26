@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import QuotationPreview from '../../components/QuotationPreview';
 
 export default function PreviewPage({ params }) {
@@ -14,19 +15,26 @@ export default function PreviewPage({ params }) {
   // Wait, "use client" so params is passed as prop. In Next 13/14 App Router, params is just an object. 
   // However, dynamic routes in client components... params prop is available.
   
+  // Use useSearchParams to get the query parameter
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type');
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Handle params being a promise if necessary
-        const resolvedParams = await params; 
+        const resolvedParams = await params;
         const id = resolvedParams.id;
         
-        const res = await fetch(`/api/quotations/${id}`);
+        // Determine endpoint based on type
+        const endpoint = type === 'Proforma' ? `/api/proformas/${id}` : `/api/quotations/${id}`;
+        
+        const res = await fetch(endpoint);
         if (!res.ok) throw new Error('Failed to fetch');
         
-        const quotation = await res.json();
-        // The API returns the quotation object. The 'data' field inside it contains the actual form data.
-        setData(quotation.data);
+        const responseData = await res.json();
+        // The API returns the data inside a 'data' field
+        setData(responseData.data);
       } catch (err) {
         console.error(err);
         setError('Failed to load quotation');
@@ -35,7 +43,7 @@ export default function PreviewPage({ params }) {
       }
     };
     fetchData();
-  }, [params]);
+  }, [params, type]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   if (error) return <div className="flex items-center justify-center min-h-screen text-red-600">{error}</div>;

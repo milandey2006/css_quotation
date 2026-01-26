@@ -15,7 +15,8 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Briefcase
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -27,6 +28,8 @@ export default function Dashboard() {
 
   const { user, isLoaded } = useUser(); // Get user role
   const router = useRouter(); // For redirect
+  const [works, setWorks] = useState([]); // Pending works state
+  const [pendingEstimatesCount, setPendingEstimatesCount] = useState(0);
 
   useEffect(() => {
     if (isLoaded) {
@@ -36,9 +39,27 @@ export default function Dashboard() {
             router.push('/works');
         } else {
             fetchDocuments(); // Only fetch if admin
+            fetchWorks();
+            
+            // Fetch local estimates counts
+            const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
+            const unpaid = estimates.filter(e => (Number(e.totalAmount) - Number(e.paidAmount || 0)) > 0).length;
+            setPendingEstimatesCount(unpaid);
         }
     }
   }, [activeTab, isLoaded, user, router]);
+
+  const fetchWorks = async () => {
+    try {
+        const res = await fetch('/api/works');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            setWorks(data);
+        }
+    } catch (e) {
+        console.error('Error fetching works:', e);
+    }
+  };
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -144,6 +165,67 @@ export default function Dashboard() {
 
           {/* Stats Section */}
           <DashboardStats quotations={quotations} />
+
+          {/* Attention / Highlights Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {/* Active Quotations Highlight */}
+              <Link href="/" onClick={() => setActiveTab('Quotations')} className="block">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden group h-full transition-transform hover:scale-[1.02]">
+                      <div className="relative z-10">
+                          <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm animate-pulse">
+                                  <FileText className="w-6 h-6 text-white" />
+                              </div>
+                              <h3 className="font-bold text-lg">Active Quotations</h3>
+                          </div>
+                          <div className="text-3xl font-bold mb-1">
+                              {quotations.filter(q => q.status === 'Active').length}
+                          </div>
+                          <p className="text-blue-100 text-sm">Need your attention</p>
+                      </div>
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-all duration-500"></div>
+                  </div>
+              </Link>
+
+              {/* Active Estimates Highlight (Purple) */}
+              <Link href="/estimated" className="block">
+                  <div className="bg-gradient-to-r from-purple-600 to-violet-600 rounded-2xl p-6 text-white shadow-lg shadow-purple-500/20 relative overflow-hidden group h-full transition-transform hover:scale-[1.02]">
+                      <div className="relative z-10">
+                          <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm animate-pulse">
+                                  <FileText className="w-6 h-6 text-white" />
+                              </div>
+                              <h3 className="font-bold text-lg">Unpaid Estimates</h3>
+                          </div>
+                          <div className="text-3xl font-bold mb-1">
+                               {/* We need to fetch this from props or state. Since we don't have it yet, let's use a local state for it */}
+                               {pendingEstimatesCount}
+                          </div>
+                          <p className="text-purple-100 text-sm">Pending payment</p>
+                      </div>
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-all duration-500"></div>
+                  </div>
+              </Link>
+
+              {/* Pending Works Highlight */}
+              <Link href="/works" className="block">
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg shadow-orange-500/20 relative overflow-hidden group h-full transition-transform hover:scale-[1.02]">
+                      <div className="relative z-10">
+                          <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm animate-pulse">
+                                  <Briefcase className="w-6 h-6 text-white" />
+                              </div>
+                              <h3 className="font-bold text-lg">Pending Works</h3>
+                          </div>
+                          <div className="text-3xl font-bold mb-1">
+                              {works.filter(w => w.status === 'pending' || w.status === 'active').length}
+                          </div>
+                          <p className="text-orange-100 text-sm">Tasks in progress</p>
+                      </div>
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-all duration-500"></div>
+                  </div>
+              </Link>
+          </div>
 
           {/* Charts Section */}
           <DashboardCharts quotations={quotations} />
@@ -311,7 +393,7 @@ const LinkWithIcon = ({ href, icon: Icon, label }) => (
 
 const StatusBadge = ({ status }) => {
   const styles = {
-    Active: 'bg-blue-50 text-blue-600 border-blue-200',
+    Active: 'bg-blue-50 text-blue-600 border-blue-200 animate-pulse', // Highlight active
     Converted: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     Lost: 'bg-red-50 text-red-600 border-red-200',
     Draft: 'bg-slate-50 text-slate-600 border-slate-200',
@@ -320,7 +402,7 @@ const StatusBadge = ({ status }) => {
   const defaultStyle = styles.Draft;
 
   return (
-    <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${styles[status] || defaultStyle}`}>
+    <span className={`px-2.5 py-1 rounded-md text-xs font-bold border uppercase tracking-wider ${styles[status] || defaultStyle}`}>
       {status}
     </span>
   );

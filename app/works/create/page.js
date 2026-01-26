@@ -116,30 +116,21 @@ export default function CreateWorkPage() {
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
        {/* Mobile Menu Button */}
-       <div className="md:hidden fixed top-4 left-4 z-50">
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 bg-white rounded-lg shadow-md border border-slate-200 text-slate-600 hover:text-blue-600"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 p-4 z-40 flex justify-between items-center shadow-sm h-16">
+          <div className="font-bold text-slate-800">Champion Security</div>
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+          >
+             <Menu className="w-6 h-6" />
+          </button>
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out z-40 bg-white shadow-xl md:shadow-none w-64 border-r border-slate-200`}>
-        <Sidebar activePage="Assign Work" />
-      </div>
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       
-       {/* Overlay */}
-       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 z-30 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-slate-50 min-h-screen">
         <div className="max-w-2xl mx-auto">
             
             <div className="mb-6">

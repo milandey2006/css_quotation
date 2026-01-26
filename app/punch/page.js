@@ -188,14 +188,12 @@ export default function PunchPage() {
           </div>
         </div>
 
-        {/* Status Message */}
-        {status !== 'idle' && (
+        {/* Status Message (Error/Loading only) */}
+        {status !== 'idle' && status !== 'success' && (
           <div className={`p-4 mx-6 mb-6 rounded-xl flex items-start gap-3 text-sm ${
-            status === 'success' ? 'bg-emerald-900/50 text-emerald-200 border border-emerald-700/50' : 
             status === 'error' ? 'bg-rose-900/50 text-rose-200 border border-rose-700/50' : 
             'bg-blue-900/50 text-blue-200 border border-blue-700/50'
           }`}>
-            {status === 'success' && <CheckCircle className="w-5 h-5 shrink-0" />}
             {status === 'error' && <AlertCircle className="w-5 h-5 shrink-0" />}
             {status === 'loading' && <div className="w-5 h-5 shrink-0 border-2 border-current border-t-transparent rounded-full animate-spin" />}
             <span className="font-medium mt-0.5">{message}</span>
@@ -206,6 +204,25 @@ export default function PunchPage() {
           GPS location required for attendance verification.
         </div>
       </div>
+
+      {/* Success Modal Popup */}
+      {status === 'success' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-100 animate-in zoom-in-95 duration-200">
+                  <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <CheckCircle className="w-10 h-10 text-emerald-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">Punch Successful!</h2>
+                  <p className="text-slate-600 mb-6">{message}</p>
+                  <button 
+                    onClick={() => setStatus('idle')}
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/30"
+                  >
+                      Done
+                  </button>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

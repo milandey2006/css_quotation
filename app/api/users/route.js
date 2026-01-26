@@ -32,6 +32,8 @@ export async function GET() {
       id: user.id,
       name: user.fullName || user.firstName || 'User',
       email: user.primaryEmailAddress?.emailAddress,
+      role: user.publicMetadata?.role || 'user',
+      lastLogin: user.lastSignInAt,
     }));
 
     return NextResponse.json(userList);

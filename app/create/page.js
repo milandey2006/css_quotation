@@ -222,9 +222,21 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden select-none print:min-h-0 print:h-auto print:overflow-visible print:block print:bg-white">
+      {/* Navigation Controls */}
+      <div className="fixed top-4 left-4 z-50 flex gap-2 print:hidden">
+          <button 
+            onClick={() => router.push('/')}
+            className="p-2 bg-white text-slate-600 rounded-lg shadow-md border border-slate-200 hover:text-blue-600 hover:border-blue-400 transition-all flex items-center gap-2"
+            title="Back to Dashboard"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            <span className="hidden md:inline font-medium text-sm">Dashboard</span>
+          </button>
+      </div>
+
       {/* Left Panel - Editor */}
       <div 
-        className="w-full lg:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden"
+        className="w-full lg:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden pt-16 lg:pt-0"
         style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : '100%' }}
       >
         <QuotationForm 
@@ -250,7 +262,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
       </div>
 
       {/* Right Panel - Preview */}
-      <div className="flex-1 h-full overflow-y-auto overflow-x-auto bg-gray-200 p-4 md:p-8 flex justify-center relative print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block print:static">
+      <div className="flex-1 h-full overflow-y-auto overflow-x-auto bg-gray-200 p-4 md:p-8 flex justify-center relative print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block print:static pt-20 md:pt-8">
          <div className="transform scale-[0.45] sm:scale-[0.6] md:scale-[0.75] lg:scale-100 origin-top transition-transform duration-300 ease-out">
             <QuotationPreview data={data} />
          </div>

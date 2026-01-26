@@ -324,57 +324,61 @@ const QuotationPreview = ({ data }) => {
                              </div> */}
                         </div>
                     </div>
-                    {/* Footers Logos */}
-                    <div className="text-center mb-6">
-                        <div className="flex justify-center items-center gap-4 mb-2">
-                             <div className="h-10 w-24 relative">
-                                <img src="https://upload.wikimedia.org/wikipedia/hi/thumb/e/e7/GeM-logo.svg/1280px-GeM-logo.svg.png" alt="Gem" className="w-48 object-contain" />
-                             </div>
-                        </div>
-                        <p className="text-red-600 font-bold text-sm">Trademark registration number-5290052/ Certificate No- 3149953</p>
-                        <p className="text-red-600 font-bold text-sm">ISO-9001 : 2015. CERTIFICATE NO- 250210Q105---</p>
-                        <p className="text-xs text-gray-700 mt-1">
-                            We are the authorized Registered channel partner of <span className="font-bold text-red-600">Axis, Pelco, Hanwha, Honeywell, Panasonic I-Pro, D-LINK, TP-LINK</span> Surveillance product and Government Approved <span className="font-bold text-red-600 underline">GEM & Trademark</span> registered Company
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-6 justify-between items-center px-4 opacity-90 mb-8">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Axis_Communications_logo.svg/1280px-Axis_Communications_logo.svg.png" alt="Axis" className="h-10 object-contain" />
-                        <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-15 object-contain" />
-                        <img src="https://www.secomp.fr/thumbor/o7rRmg8K9vuWJVwmE2VThnpQivM=/filters:cachevalid(2022-09-23T12:17:17.716683):strip_icc():strip_exif()/cms_secde/cms/ueber_uns/markenwelt/hersteller_logos/i-pro_logo_rgb_blue.png" alt="Panasonic" className="h-10 object-contain" />
-                        <img src="https://www.matrixcomsec.com/products/wp-content/uploads/2022/01/Matrix-ComSec_Logo1new.png" alt="Matrix" className="h-10 object-contain" />
-                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnzwl-53GN5z4FI3ITAH6aA946jNx65kaU_Q&s" alt="Hanwha" className="h-10 object-contain" />
-                        <img src="https://www.actility.com/wp-content/uploads/2024/12/Milesight-logo.png" alt="Milesight" className="h-10 object-contain" />
-                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-20 object-contain" />
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/D-Link_wordmark.svg/960px-D-Link_wordmark.svg.png" alt="Honeywell" className="h-10 object-contain" />
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Alcatel-Lucent_logo.svg/1280px-Alcatel-Lucent_logo.svg.png" alt="Honeywell" className="h-10 object-contain" />
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/TPLINK_Logo_2.svg/1280px-TPLINK_Logo_2.svg.png" alt="Honeywell" className="h-10 object-contain" />
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Netgear.png" alt="Honeywell" className="h-5 object-contain" />
-                        <img src="https://www.nit.ae/wp-content/uploads/2022/11/MS_logo_CBlue_CMYK-1-1024x212.png" alt="Milestone" className="h-10 object-contain" />
-                    </div>
+                    {/* Footer Logos & Certificates - Hide for Proforma */}
+                    {safeData.type !== 'Proforma' && (
+                        <>
+                            <div className="text-center mb-6">
+                                <div className="flex justify-center items-center gap-4 mb-2">
+                                    <div className="h-10 w-24 relative">
+                                        <img src="https://upload.wikimedia.org/wikipedia/hi/thumb/e/e7/GeM-logo.svg/1280px-GeM-logo.svg.png" alt="Gem" className="w-48 object-contain" />
+                                    </div>
+                                </div>
+                                <p className="text-red-600 font-bold text-sm">Trademark registration number-5290052/ Certificate No- 3149953</p>
+                                <p className="text-red-600 font-bold text-sm">ISO-9001 : 2015. CERTIFICATE NO- 250210Q105---</p>
+                                <p className="text-xs text-gray-700 mt-1">
+                                    We are the authorized Registered channel partner of <span className="font-bold text-red-600">Axis, Pelco, Hanwha, Honeywell, Panasonic I-Pro, D-LINK, TP-LINK</span> Surveillance product and Government Approved <span className="font-bold text-red-600 underline">GEM & Trademark</span> registered Company
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap gap-6 justify-between items-center px-4 opacity-90 mb-8">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Axis_Communications_logo.svg/1280px-Axis_Communications_logo.svg.png" alt="Axis" className="h-10 object-contain" />
+                                <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-15 object-contain" />
+                                <img src="https://www.secomp.fr/thumbor/o7rRmg8K9vuWJVwmE2VThnpQivM=/filters:cachevalid(2022-09-23T12:17:17.716683):strip_icc():strip_exif()/cms_secde/cms/ueber_uns/markenwelt/hersteller_logos/i-pro_logo_rgb_blue.png" alt="Panasonic" className="h-10 object-contain" />
+                                <img src="https://www.matrixcomsec.com/products/wp-content/uploads/2022/01/Matrix-ComSec_Logo1new.png" alt="Matrix" className="h-10 object-contain" />
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnzwl-53GN5z4FI3ITAH6aA946jNx65kaU_Q&s" alt="Hanwha" className="h-10 object-contain" />
+                                <img src="https://www.actility.com/wp-content/uploads/2024/12/Milesight-logo.png" alt="Milesight" className="h-10 object-contain" />
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-20 object-contain" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/D-Link_wordmark.svg/960px-D-Link_wordmark.svg.png" alt="Honeywell" className="h-10 object-contain" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Alcatel-Lucent_logo.svg/1280px-Alcatel-Lucent_logo.svg.png" alt="Honeywell" className="h-10 object-contain" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/TPLINK_Logo_2.svg/1280px-TPLINK_Logo_2.svg.png" alt="Honeywell" className="h-10 object-contain" />
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Netgear.png" alt="Honeywell" className="h-5 object-contain" />
+                                <img src="https://www.nit.ae/wp-content/uploads/2022/11/MS_logo_CBlue_CMYK-1-1024x212.png" alt="Milestone" className="h-10 object-contain" />
+                            </div>
 
-                    {/* Contact & Links Footer */}
-                    <div className="flex justify-between items-start text-xs border-t border-gray-200 pt-4 mt-auto">
-                        <div className="space-y-1">
-                            <p>
-                                <span className="font-semibold text-black">Web:- </span>
-                                <a href="https://championsecuritysystem.com" className="text-blue-600 underline">https://championsecuritysystem.com</a>
-                            </p>
-                            <p>
-                                <span className="font-semibold text-black">Email:- </span>
-                                <a href="mailto:admin@championsecuritysystem.com" className="text-blue-600 underline">admin@championsecuritysystem.com</a>
-                            </p>
-                            <p>
-                                <span className="font-semibold text-black">Email:- </span>
-                                <a href="mailto:info@championsecuritysystem.com" className="text-blue-600 underline">info@championsecuritysystem.com</a>
-                            </p>
-                        </div>
-                        <div className="text-right space-y-1">
-                            <p className="font-semibold text-black">Please Click on Link Below (Company Profile)</p>
-                            <a href="https://championsecuritysystem.com/documents/profile.pdf" className="text-blue-600 underline block">
-                                https://championsecuritysystem.com/documents/profile.pdf
-                            </a>
-                        </div>
-                    </div>
+                            {/* Contact & Links Footer */}
+                            <div className="flex justify-between items-start text-xs border-t border-gray-200 pt-4 mt-auto">
+                                <div className="space-y-1">
+                                    <p>
+                                        <span className="font-semibold text-black">Web:- </span>
+                                        <a href="https://championsecuritysystem.com" className="text-blue-600 underline">https://championsecuritysystem.com</a>
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold text-black">Email:- </span>
+                                        <a href="mailto:admin@championsecuritysystem.com" className="text-blue-600 underline">admin@championsecuritysystem.com</a>
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold text-black">Email:- </span>
+                                        <a href="mailto:info@championsecuritysystem.com" className="text-blue-600 underline">info@championsecuritysystem.com</a>
+                                    </p>
+                                </div>
+                                <div className="text-right space-y-1">
+                                    <p className="font-semibold text-black">Please Click on Link Below (Company Profile)</p>
+                                    <a href="https://championsecuritysystem.com/documents/profile.pdf" className="text-blue-600 underline block">
+                                        https://championsecuritysystem.com/documents/profile.pdf
+                                    </a>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
          )}

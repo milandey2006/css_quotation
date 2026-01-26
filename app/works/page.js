@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, MapPin, Phone, Briefcase, Navigation, Clock, CheckCircle } from 'lucide-react';
+import { Menu, MapPin, Phone, Briefcase, Navigation, Clock, CheckCircle, Edit, X } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 
 export default function WorksPage() {
@@ -11,6 +11,11 @@ export default function WorksPage() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingWork, setEditingWork] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Fetch Works
@@ -26,8 +31,6 @@ export default function WorksPage() {
         });
 
     // Fetch Users (for dropdown)
-    fetch('/api/works') // Fetching works instead of users? NOTE: The user's code previously had this error or I might be misreading. Wait, I should fix this to fetch /api/users if I am touching it.
-    // Actually the previous code I wrote had fetch('/api/users'). Let me correct it to be safe.
     fetch('/api/users')
         .then(res => res.json())
         .then(data => {
@@ -82,6 +85,46 @@ export default function WorksPage() {
           // Could reload here
       }
   }
+
+  // --- Edit Handlers ---
+  const handleEditClick = (work) => {
+      setEditingWork({ ...work });
+      setIsEditModalOpen(true);
+  };
+
+  const handleEditChange = (e) => {
+      const { name, value } = e.target;
+      setEditingWork(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = async () => {
+      if (!editingWork) return;
+      setIsSaving(true);
+      try {
+          const res = await fetch(`/api/works/${editingWork.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  clientName: editingWork.clientName,
+                  clientPhone: editingWork.clientPhone,
+                  clientAddress: editingWork.clientAddress,
+                  instructions: editingWork.instructions
+              })
+          });
+
+          if (!res.ok) throw new Error('Failed to update');
+
+          // Update local state
+          setWorks(prev => prev.map(w => w.id === editingWork.id ? { ...w, ...editingWork } : w));
+          setIsEditModalOpen(false);
+          setEditingWork(null);
+      } catch (err) {
+          console.error(err);
+          alert('Failed to save changes');
+      } finally {
+          setIsSaving(false);
+      }
+  };
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -164,19 +207,28 @@ export default function WorksPage() {
                     {filteredWorks.map((work) => (
                         <div key={work.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow relative group">
                             
-                             {/* Delete Button (Only for Admins) */}
+                             {/* Admin Actions */}
                              {isAdmin && (
-                                <button 
-                                    onClick={() => deleteWork(work.id)}
-                                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                    title="Delete Work"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
+                                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button 
+                                        onClick={() => handleEditClick(work)}
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                        title="Edit Work"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => deleteWork(work.id)}
+                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                        title="Delete Work"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
                              )}
 
                             <div className="p-6">
-                                <div className="flex justify-between items-start mb-4 pr-10"> {/* pr-10 for delete button space */}
+                                <div className="flex justify-between items-start mb-4 pr-16"> {/* Increased padding-right for buttons */}
                                     <h3 className="font-bold text-lg text-slate-900">{work.clientName}</h3>
                                     <select 
                                         value={work.status || 'pending'}
@@ -253,6 +305,84 @@ export default function WorksPage() {
             )}
         </div>
       </main>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingWork && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                      <h3 className="font-bold text-lg text-gray-800">Edit Work Details</h3>
+                      <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                          <X className="w-5 h-5" />
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 space-y-4 text-black">
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
+                          <input 
+                              name="clientName"
+                              value={editingWork.clientName}
+                              onChange={handleEditChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              placeholder="e.g. Acme Corp"
+                          />
+                      </div>
+                      
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                          <input 
+                              name="clientPhone"
+                              value={editingWork.clientPhone}
+                              onChange={handleEditChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                              placeholder="e.g. +91 9876543210"
+                          />
+                      </div>
+
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                          <textarea 
+                              name="clientAddress"
+                              value={editingWork.clientAddress}
+                              onChange={handleEditChange}
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
+                              placeholder="Full address..."
+                          />
+                      </div>
+
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
+                          <textarea 
+                              name="instructions"
+                              value={editingWork.instructions || ''}
+                              onChange={handleEditChange}
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
+                              placeholder="Special instructions for the technician..."
+                          />
+                      </div>
+                  </div>
+
+                  <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                      <button 
+                          onClick={() => setIsEditModalOpen(false)}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={handleSaveEdit}
+                          disabled={isSaving}
+                          className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md shadow-blue-200 transition-all flex items-center gap-2"
+                      >
+                          {isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

@@ -8,16 +8,21 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status, userId } = body; // Accept userId update
+    const { status, userId, clientName, clientPhone, clientAddress, instructions } = body; // Accept all editable fields
 
-    // Allow updating status, userId, or both
-    if (!status && userId === undefined) {
+    // Allow updating any of the fields
+    if (!status && userId === undefined && !clientName && !clientPhone && !clientAddress && !instructions) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
     const updateData = {};
     if (status) updateData.status = status;
-    if (userId !== undefined) updateData.userId = userId; // Allow clearing assignment (null)
+    if (userId !== undefined) updateData.userId = userId;
+    // Add new editable fields
+    if (clientName) updateData.clientName = clientName;
+    if (clientPhone) updateData.clientPhone = clientPhone;
+    if (clientAddress) updateData.clientAddress = clientAddress;
+    if (instructions) updateData.instructions = instructions;
 
     const updated = await db.update(works)
       .set(updateData)

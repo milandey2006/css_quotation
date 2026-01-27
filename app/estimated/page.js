@@ -55,23 +55,42 @@ export default function EstimatedListPage() {
   };
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem('estimates') || '[]');
-    // Sort by date desc
-    data.sort((a, b) => new Date(b.updatedAt || b.billDate) - new Date(a.updatedAt || a.billDate));
-    setEstimates(data);
+    fetchEstimates();
   }, []);
 
-  const deleteEstimate = (id) => {
+  const fetchEstimates = async () => {
+    try {
+      const res = await fetch('/api/estimates');
+      if (res.ok) {
+        const data = await res.json();
+        setEstimates(data);
+      } else {
+        console.error('Failed to fetch estimates');
+      }
+    } catch (error) {
+      console.error('Error fetching estimates:', error);
+    }
+  };
+
+  const deleteEstimate = async (id) => {
     if (confirm('Are you sure you want to delete this estimate?')) {
-      const updated = estimates.filter(e => e.id !== id);
-      setEstimates(updated);
-      localStorage.setItem('estimates', JSON.stringify(updated));
+      try {
+        const res = await fetch(`/api/estimates/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setEstimates(prev => prev.filter(e => e.id !== id));
+        } else {
+          alert('Failed to delete estimate');
+        }
+      } catch (error) {
+        console.error('Error deleting estimate:', error);
+        alert('Error deleting estimate');
+      }
     }
   };
 
   const filteredEstimates = estimates.filter(est => 
-    est.billTo.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    est.billNo.toLowerCase().includes(searchTerm.toLowerCase())
+    (est.clientName || est.billTo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (est.billNo || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const totals = calculateTotals(filteredEstimates);
@@ -244,9 +263,9 @@ export default function EstimatedListPage() {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
-                                                        {est.billTo.charAt(0).toUpperCase()}
+                                                        {(est.clientName || est.billTo || '?').charAt(0).toUpperCase()}
                                                     </div>
-                                                    <span className="text-slate-700 font-medium line-clamp-1">{est.billTo.split('\n')[0]}</span>
+                                                    <span className="text-slate-700 font-medium line-clamp-1">{(est.clientName || est.billTo || '').split('\n')[0]}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 font-semibold text-slate-700">

@@ -18,11 +18,11 @@ function CreateEstimateForm() {
   
   // Form State
   const [formData, setFormData] = useState({
-    id: Date.now().toString(), // Unique ID for new records
+    id: '', // Initial empty, will be set on client or ignored if new
     billTo: '',
     billNo: 'CSS/2025/',
     // Store as YYYY-MM-DD for input, format for display later
-    billDate: new Date().toISOString().slice(0, 10), 
+    billDate: '', // Initial empty to match server
     paidAmount: 0,
     items: [
       { description: 'ESSL K30 Biometric', make: 'ESSL', sn: 'PHY7244\n700691', qty: 1, rate: 6800 },
@@ -36,17 +36,39 @@ function CreateEstimateForm() {
 5. Damage And Repair Not Cover In Warranty`
   });
 
+  // Initialize date on client only to avoid hydration mismatch
+  useEffect(() => {
+    if (!formData.billDate && !editId) {
+        setFormData(prev => ({
+            ...prev,
+            id: Date.now().toString(),
+            billDate: new Date().toISOString().slice(0, 10)
+        }));
+    }
+  }, []);
+
+  // Load Data for Edit
   // Load Data for Edit
   useEffect(() => {
     if (editId) {
-        const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
-        const existing = estimates.find(e => e.id === editId);
-        if (existing) {
-            setFormData(existing);
-            setShowGst(existing.showGst || false);
-        }
+      fetchEstimate(editId);
     }
   }, [editId]);
+
+  const fetchEstimate = async (id) => {
+    try {
+      const res = await fetch(`/api/estimates/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFormData(data);
+        setShowGst(data.showGst || false);
+      } else {
+        console.error('Failed to fetch estimate');
+      }
+    } catch (error) {
+       console.error('Error fetching estimate:', error);
+    }
+  };
 
   // Handlers
   const handleInputChange = (field, value) => {
@@ -96,37 +118,62 @@ function CreateEstimateForm() {
     `,
   });
 
-  const saveEstimate = () => {
+  const saveEstimate = async () => {
     try {
       setSaveStatus('saving');
-      const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
       
       // Calculate totals for quick list view
       const subTotal = formData.items.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.rate) || 0)), 0);
       const gstTotal = formData.items.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.rate) || 0) * ((item.gst || 0) / 100)), 0);
       const total = showGst ? (subTotal + gstTotal) : subTotal;
 
-      const record = {
+      const payload = {
         ...formData,
         showGst, // Save toggle state
         totalAmount: total,
         updatedAt: new Date().toISOString()
       };
 
-      // Check if exists
-      const index = estimates.findIndex(e => e.id === formData.id);
-      if (index >= 0) {
-        estimates[index] = record;
+      let res;
+      if (editId) {
+          // Update existing
+           res = await fetch(`/api/estimates/${editId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+           });
       } else {
-        estimates.push(record);
+          // Create new
+          // Remove ID so DB generates it (or keep generic ID logic if prefer, but DB serial is better usually, 
+          // but here we are using serial in DB but might have a string ID in state. 
+          // Let's stick to the form state ID if we want, OR better let's let backend handle ID if possible.
+          // However, the current state uses Date.now() string. 
+          // Schema has Serial ID. So we should probably strip ID for new or let backend ignore it.
+          // The API route currently returns the new object with DB ID.
+           const { id, ...newPayload } = payload; // Remove client-side ID for new creation to let DB handle it
+           res = await fetch('/api/estimates', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newPayload)
+           });
       }
 
-      localStorage.setItem('estimates', JSON.stringify(estimates));
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus(''), 2000);
+      if (res.ok) {
+           setSaveStatus('saved');
+           setTimeout(() => setSaveStatus(''), 2000);
+           const result = await res.json();
+           if (!editId) {
+               // If created new, redirect or update ID
+               router.push(`/estimated/create?id=${result.id}`);
+           }
+      } else {
+          throw new Error('Failed to save');
+      }
+
     } catch (err) {
       console.error("Save failed", err);
       alert("Failed to save estimate");
+      setSaveStatus('');
     }
   };
 

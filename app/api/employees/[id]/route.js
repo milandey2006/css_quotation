@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     
     const joinDate = body.joinDate ? new Date(body.joinDate) : null;
@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     await db.delete(employees).where(eq(employees.id, id));
     return NextResponse.json({ success: true });
   } catch (error) {

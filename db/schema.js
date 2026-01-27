@@ -99,3 +99,15 @@ export const employees = pgTable('employees', {
   status: text('status').default('active'), // active, inactive
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const estimates = pgTable('estimates', {
+  id: serial('id').primaryKey(),
+  billNo: text('bill_no').notNull(),
+  billDate: timestamp('bill_date').defaultNow().notNull(),
+  clientName: text('client_name'),
+  totalAmount: integer('total_amount'),
+  paidAmount: integer('paid_amount').default(0),
+  status: text('status').default('pending'),
+  data: jsonb('data').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});

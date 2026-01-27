@@ -48,7 +48,33 @@ export async function PUT(request, { params }) {
         const body = await request.json();
         
         // Remove id from body to avoid update error
-        const { id: _, ...updateData } = body;
+        const { id: _, dateOfJoining, lopDays, ...rest } = body;
+
+        // Explicitly construct update object to avoid passing unknown fields that cause 500
+        const updateData = {
+            employeeName: rest.employeeName,
+            employeeId: rest.employeeId,
+            designation: rest.designation,
+            monthYear: rest.monthYear,
+            aadhaarNo: rest.aadhaarNo,
+            panNo: rest.panNo,
+            uanNo: rest.uanNo,
+            utrNo: rest.utrNo,
+            earnings: rest.earnings,
+            deductions: rest.deductions,
+            advanceSalary: rest.advanceSalary,
+            basicSalary: rest.basicSalary,
+            totalEarnings: rest.totalEarnings,
+            totalDeductions: rest.totalDeductions,
+            netPayable: rest.netPayable,
+            workDays: rest.workDays,
+            holidays: rest.holidays,
+            paidDays: rest.paidDays,
+            // Add other fields if missing from this list but present in schema
+        };
+
+        // Remove undefined keys so we don't overwrite with null unless intentional
+        Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
         const updatedSlip = await db.update(salarySlips)
             .set(updateData)

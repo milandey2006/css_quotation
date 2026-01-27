@@ -24,7 +24,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleSidebar }) => {
   // Define menu items with visibility logic
   const allMenuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/', roles: ['admin'] },
-    { name: 'Quotation', icon: FileText, href: '/create', roles: ['admin'] },
+    { name: 'Quotation', icon: FileText, href: '/quotation', roles: ['admin'] },
+    { name: 'Proforma Invoice', icon: FileText, href: '/proforma', roles: ['admin'] },
     { name: 'Estimated', icon: FileText, href: '/estimated', roles: ['admin'] },
     { name: 'Worksheet', icon: Table, href: '/worksheet', roles: ['admin'] },
     { name: 'Salary Slips', icon: FileText, href: '/salary', roles: ['admin'] }, 

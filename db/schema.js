@@ -21,7 +21,6 @@ export const proformas = pgTable('proformas', {
   status: text('status').default('pending'),
   data: jsonb('data').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
-  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const punches = pgTable('punches', {
@@ -43,7 +42,8 @@ export const works = pgTable('works', {
   clientPhone: text('client_phone'),
   clientAddress: text('client_address'),
   instructions: text('instructions'),
-  userId: text('user_id'), // Clerk User ID
+  userId: text('user_id'), // Clerk User ID - DEPRECATED
+  userIds: jsonb('user_ids'), // Array of Clerk User IDs
   status: text('status').default('pending'), // pending, completed
   createdAt: timestamp('created_at').defaultNow(),
 });

@@ -135,24 +135,26 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
            </div>
       </div>
 
-       {/* Type Toggle */}
-       <div className="mb-6">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Document Type</label>
-           <div className="flex bg-gray-100 p-1 rounded-md w-fit">
-              <button 
-                  onClick={() => onChange('meta', 'type', 'Quotation')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded ${data.type !== 'Proforma' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                  Quotation
-              </button>
-               <button 
-                  onClick={() => onChange('meta', 'type', 'Proforma')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded ${data.type === 'Proforma' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                  Proforma Invoice
-              </button>
+       {/* Type Toggle - Only show if not fixed */}
+       {!data.fixedType && (
+           <div className="mb-6">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Document Type</label>
+               <div className="flex bg-gray-100 p-1 rounded-md w-fit">
+                  <button 
+                      onClick={() => onChange('meta', 'type', 'Quotation')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded ${data.type !== 'Proforma' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                      Quotation
+                  </button>
+                   <button 
+                      onClick={() => onChange('meta', 'type', 'Proforma')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded ${data.type === 'Proforma' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                      Proforma Invoice
+                  </button>
+               </div>
            </div>
-       </div>
+       )}
 
       {/* Meta Fields */}
       <div className="mb-8">
@@ -160,13 +162,37 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
              <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Valid Till</label>
-              <input
-                type="date"
-                value={data.validTill}
-                onChange={(e) => handleChange(e, 'meta', 'validTill')}
-                className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
-              />
+               {data.type === 'Proforma' ? (
+                 <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">PO Date</label>
+                        <input
+                            type="date"
+                            value={data.poDate || ''}
+                            onChange={(e) => handleChange(e, 'meta', 'poDate')}
+                            className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">PO No.</label>
+                        <input
+                            value={data.poNo || ''}
+                            onChange={(e) => handleChange(e, 'meta', 'poNo')}
+                            className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                        />
+                    </div>
+                 </div>
+               ) : (
+                <>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Valid Till</label>
+                <input
+                    type="date"
+                    value={data.validTill}
+                    onChange={(e) => handleChange(e, 'meta', 'validTill')}
+                    className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                />
+                </>
+               )}
             </div>
             {/* Subject Line Input - Spanning full width */}
             <div className="col-span-2">

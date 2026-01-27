@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { works } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 
 export async function PUT(request, { params }) {
   try {
@@ -16,6 +17,7 @@ export async function PUT(request, { params }) {
     const updateData = {};
     if (status) updateData.status = status;
     if (userId !== undefined) updateData.userId = userId;
+    if (body.userIds !== undefined) updateData.userIds = body.userIds; // Handle multi-user update
     if (clientName) updateData.clientName = clientName;
     if (clientPhone) updateData.clientPhone = clientPhone;
     if (clientAddress) updateData.clientAddress = clientAddress;

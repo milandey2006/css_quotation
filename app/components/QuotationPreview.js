@@ -13,6 +13,9 @@ const QuotationPreview = ({ data }) => {
     terms: data?.terms || '',
   };
 
+  const isProforma = (safeData.type || '').toLowerCase().includes('proforma');
+
+
   // --- Calculations ---
   const calculateRowTotal = (qty, price, gst) => {
     const base = (qty || 0) * (price || 0);
@@ -32,7 +35,8 @@ const QuotationPreview = ({ data }) => {
   // 2. Balanced limits to prevent overflow while minimizing gaps
   const PAGE_1_LIMIT = 22; 
   const PAGE_N_LIMIT = 36;
-  const FOOTER_WEIGHT = 4; 
+  const FOOTER_WEIGHT = 4;
+  const PROFORMA_FOOTER_WEIGHT = 10; // Approx weight for Totals + 5 lines of T&C
 
   const getItemWeight = (description = '') => {
     const desc = description || '';
@@ -106,13 +110,26 @@ const QuotationPreview = ({ data }) => {
   if (currentPage.length > 0) pages.push(currentPage);
   else if (pages.length === 0) pages.push([]); 
 
-  if (currentUsage > (currentLimit - FOOTER_WEIGHT)) pages.push([]); 
-  pages.push([]); 
+  // Pagination for Footers
+  if (isProforma) {
+      // If Proforma and not enough space for Totals+T&C, push new page
+      if (currentUsage > (currentLimit - PROFORMA_FOOTER_WEIGHT)) {
+          pages.push([]);
+      }
+  } else {
+      // Standard Quotation logic
+      if (currentUsage > (currentLimit - FOOTER_WEIGHT)) pages.push([]); 
+      pages.push([]); 
+  }
   
   const isLastPage = (index) => index === pages.length - 1;
 
   // --- Render Page Function ---
-  const renderPage = (pageItems, pageIndex) => (
+  const renderPage = (pageItems, pageIndex) => {
+    // For Proforma, show totals on the very last page (which might be an intentionally added overflow page)
+    const showInlineTotals = isProforma && (pageIndex === pages.length - 1);
+    
+    return (
     <div 
       key={pageIndex} 
       className={`bg-white shadow-2xl mx-auto w-[210mm] h-[297mm] p-10 relative text-sm sm:text-base text-gray-800 mb-8 overflow-hidden flex flex-col print:shadow-none print:mb-0 print:w-full print:h-[297mm] print:overflow-hidden print:mx-0 ${pageIndex < pages.length - 1 ? 'print:break-after-page' : ''}`}
@@ -182,8 +199,21 @@ const QuotationPreview = ({ data }) => {
                             <span className="text-gray-600">Date:</span>
                             <span>{safeData.date}</span>
                             
-                            <span className="text-gray-600">Valid Till:</span>
-                            <span>{safeData.validTill}</span>
+
+                            
+                            {isProforma ? (
+                                <>
+                                    <span className="text-gray-600">PO Date:</span>
+                                    <span>{safeData.poDate || '-'}</span>
+                                    <span className="text-gray-600">PO No.:</span>
+                                    <span>{safeData.poNo || '-'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-gray-600">Valid Till:</span>
+                                    <span>{safeData.validTill}</span>
+                                </>
+                            )}
 
                             <span className="text-gray-600">GSTIN No:</span>
                             <span>{safeData.gstNo || '27AHXPD7350C1Z8'}</span>
@@ -269,9 +299,70 @@ const QuotationPreview = ({ data }) => {
                 </table>
             </div>
             )}
+
+            {showInlineTotals && (
+                 <div className="mt-4 pb-[30px]">
+                     {/* Totals Block Inline */}
+                     <div className="flex justify-end mb-8">
+                        <div className="w-64">
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-gray-600">Sub Total:</span>
+                                <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b mb-2">
+                                <span className="text-gray-600">GST (Avg):</span>
+                                <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                            </div>
+                            <div className="flex justify-between py-3 px-2 text-black rounded-sm">
+                                <span className="font-bold">Grand Total:</span>
+                                <span className="font-bold text-lg">₹ {grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                            </div>
+                             <div className="mt-4 text-right">
+                                <p className="text-gray-600 text-xs uppercase font-bold mb-1">Amount in Words:</p>
+                                <p className="text-gray-800 font-semibold italic">
+                                    {Math.round(grandTotal) > 0 ? numberToWords(Math.round(grandTotal)) : 'Zero'}
+                                </p>
+                            </div>
+                        </div>
+                     </div>
+
+                     {/* T&C and Signature Block Inline */}
+                     <div className="flex justify-between items-end mb-4">
+                        <div className="text-xs text-gray-700 leading-relaxed max-w-[60%]">
+                           <div className="space-y-2">
+                              {(safeData.terms || '').split('\n').map((term, i) => {
+                                   const parts = term.split(/(:|-)/); 
+                                   if (parts.length > 1) {
+                                       return (
+                                           <p key={i}>
+                                               <span className="font-bold text-black">• {parts[0].trim()}{parts[1]}</span>
+                                               <span dangerouslySetInnerHTML={{ __html: term.substring(parts[0].length + 1).trim() }} />
+                                           </p>
+                                       );
+                                   }
+                                   return term.trim() ? <p key={i} dangerouslySetInnerHTML={{ __html: '• ' + term }} /> : null;
+                             })}
+                           </div>
+                        </div>
+
+                        {/* Signature Block */}
+                        <div className="text-center w-[200px]">
+                           <p className="font-bold text-xs text-black mb-4">FOR CHAMPION SECURITY SYSTEM</p>
+                           <div className="h-16 flex items-center justify-center mb-1">
+                               <img src="/sign/signature.png" alt="Signature" className="max-h-full max-w-full object-contain" />
+                           </div>
+                           <p className="font-bold text-xs text-black border-t border-black pt-1">AUTHORISED SIGNATORY</p>
+                        </div>
+                     </div>
+
+                     <div className="text-center mt-8 border-t border-gray-200 pt-2">
+                         <p className="text-[10px] text-gray-500 italic">This is a computer generated invoice</p>
+                     </div>
+                 </div>
+            )}
          </div>
 
-         {pageIndex === pages.length - 2 && (
+         {!isProforma && pageIndex === pages.length - 2 && (
             <div className={pages.length === 2 ? "mt-auto" : "mt-8"}>
                 <div className="flex justify-between items-end mb-8 mt-4">
                    <div className="w-1/2 pr-4">
@@ -298,7 +389,7 @@ const QuotationPreview = ({ data }) => {
             </div>
          )}
 
-         {isLastPage(pageIndex) && (
+         {!isProforma && isLastPage(pageIndex) && (
             <div className="flex flex-col h-full justify-start">
                 <div className="pt-4">
                     <div className="flex justify-between items-start gap-8 mb-6">
@@ -385,7 +476,7 @@ const QuotationPreview = ({ data }) => {
        </div>
     </div>
   );
-;
+};
 
   return (
     <div className="flex flex-col items-center bg-gray-100 py-8 print:absolute print:top-0 print:left-0 print:w-full print:bg-white print:py-0 print:m-0 print:block">

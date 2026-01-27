@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import EstimatedPreview from '../../components/EstimatedPreview';
 import QuotationPreview from '../../components/QuotationPreview';
 
 export default function PreviewPage({ params }) {
@@ -9,12 +10,6 @@ export default function PreviewPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Unwrap params using React.use() or await if it's async in this Next.js version (likely synchronous-ish for client components but params is promise-like in recent Next)
-  // Actually, 'params' prop in page components is a Promise in Next.js 15+, but let's assume it might be directly available or awaitable. 
-  // Safest for client component: unwrap with `use` or wait for simple props. 
-  // Wait, "use client" so params is passed as prop. In Next 13/14 App Router, params is just an object. 
-  // However, dynamic routes in client components... params prop is available.
-  
   // Use useSearchParams to get the query parameter
   const searchParams = useSearchParams();
   const type = searchParams.get('type');
@@ -26,18 +21,26 @@ export default function PreviewPage({ params }) {
         const resolvedParams = await params;
         const id = resolvedParams.id;
         
-        // Determine endpoint based on type
-        const endpoint = type === 'Proforma' ? `/api/proformas/${id}` : `/api/quotations/${id}`;
+        let endpoint = '';
+        if (type === 'Proforma') endpoint = `/api/proformas/${id}`;
+        else if (type === 'Estimate') endpoint = `/api/estimates/${id}`;
+        else endpoint = `/api/quotations/${id}`;
         
         const res = await fetch(endpoint);
         if (!res.ok) throw new Error('Failed to fetch');
         
         const responseData = await res.json();
-        // The API returns the data inside a 'data' field
-        setData(responseData.data);
+        
+        if (type === 'Estimate') {
+            // Estimates API returns the data spread at the root
+            setData(responseData);
+        } else {
+            // Quotations/Proformas return data nested in .data
+            setData(responseData.data);
+        }
       } catch (err) {
         console.error(err);
-        setError('Failed to load quotation');
+        setError('Failed to load document');
       } finally {
         setLoading(false);
       }
@@ -66,7 +69,11 @@ export default function PreviewPage({ params }) {
           </button>
        </div>
        <div className="shadow-2xl">
-          <QuotationPreview data={data} />
+          {type === 'Estimate' ? (
+              <EstimatedPreview data={data} showGst={data.showGst} />
+          ) : (
+              <QuotationPreview data={data} />
+          )}
        </div>
        <style jsx global>{`
           @media print {

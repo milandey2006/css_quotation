@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar';
 import { 
     Plus, Search, Trash2, Edit, FileText, 
     Filter, Calendar, ChevronDown, CheckCircle, 
-    MoreHorizontal, ArrowUpRight, Menu, Printer, X
+    MoreHorizontal, ArrowUpRight, Menu, Printer, X, Eye
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
@@ -290,6 +290,13 @@ export default function EstimatedListPage() {
                                             <td className="px-6 py-4 text-right">
                                                 {!isPreview && (
                                                 <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={() => window.open(`/preview/${est.id}?type=Estimate`, '_blank')}
+                                                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                        title="View"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
                                                     <button 
                                                         onClick={() => printSingleEstimate(est)}
                                                         className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"

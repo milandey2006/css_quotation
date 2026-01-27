@@ -23,10 +23,18 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { clientName, clientPhone, clientAddress, instructions, assignedUserId } = body;
+    const { clientName, clientPhone, clientAddress, instructions, assignedUserId, assignedUserIds } = body;
 
     if (!clientName) {
       return NextResponse.json({ error: 'Client Name is required' }, { status: 400 });
+    }
+
+    // Prepare userIds array (ensure unique)
+    let userIdsToSave = [];
+    if (assignedUserIds && Array.isArray(assignedUserIds)) {
+        userIdsToSave = assignedUserIds;
+    } else if (assignedUserId) {
+        userIdsToSave = [assignedUserId];
     }
 
     const inserted = await db.insert(works).values({
@@ -34,7 +42,8 @@ export async function POST(request) {
       clientPhone: clientPhone || '',
       clientAddress: clientAddress || '',
       instructions: instructions || '',
-      userId: assignedUserId || null,
+      userId: assignedUserId || null, // Keeping legacy field for now
+      userIds: userIdsToSave,        // New Multi-user field
       status: 'pending',
       createdAt: new Date(),
     }).returning();
@@ -62,8 +71,14 @@ export async function GET() {
         // Admin sees all works
         data = await db.select().from(works).orderBy(desc(works.createdAt));
     } else {
-        // User sees ONLY their assigned works
-        data = await db.select().from(works).where(eq(works.userId, userId)).orderBy(desc(works.createdAt));
+        // User sees works assigned to them (legacy userId OR new userIds array)
+        // Fetching all and filtering in memory for simplicity with JSONB array checks
+        const allWorks = await db.select().from(works).orderBy(desc(works.createdAt));
+        data = allWorks.filter(work => {
+            const isLegacyAssigned = work.userId === userId;
+            const isMultiAssigned = Array.isArray(work.userIds) && work.userIds.includes(userId);
+            return isLegacyAssigned || isMultiAssigned;
+        });
     }
 
     return NextResponse.json(data);

@@ -26,7 +26,8 @@ export default function EmployeesPage() {
       bankAccountNo: '',
       ifscCode: '',
       joinDate: '',
-      basicSalary: 0
+      basicSalary: 0,
+      advanceBalance: 0
   });
 
   const { user, isLoaded } = useUser();
@@ -99,7 +100,8 @@ export default function EmployeesPage() {
           bankAccountNo: emp.bankAccountNo || '',
           ifscCode: emp.ifscCode || '',
           joinDate: emp.joinDate ? new Date(emp.joinDate).toISOString().split('T')[0] : '', // Format for date input
-          basicSalary: emp.basicSalary || 0
+          basicSalary: emp.basicSalary || 0,
+          advanceBalance: emp.advanceBalance || 0
       });
       setView('form');
   };
@@ -122,7 +124,7 @@ export default function EmployeesPage() {
 
   const resetForm = () => {
       setEditingId(null);
-      setFormData({  name: '', designation: '', mobile: '', email: '', address: '', panNo: '', aadhaarNo: '', uanNo: '', bankAccountNo: '', ifscCode: '', joinDate: '', basicSalary: 0 });
+      setFormData({  name: '', designation: '', mobile: '', email: '', address: '', panNo: '', aadhaarNo: '', uanNo: '', bankAccountNo: '', ifscCode: '', joinDate: '', basicSalary: 0, advanceBalance: 0 });
   };
 
   return (
@@ -186,6 +188,7 @@ export default function EmployeesPage() {
                                         <th className="px-6 py-4">Designation</th>
                                         <th className="px-6 py-4">Contact</th>
                                         <th className="px-6 py-4">Join Date</th>
+                                        <th className="px-6 py-4">Adv. Balance</th>
                                         <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -200,6 +203,9 @@ export default function EmployeesPage() {
                                             </td>
                                             <td className="px-6 py-4 text-slate-600 text-sm">
                                                 {emp.joinDate ? new Date(emp.joinDate).toLocaleDateString() : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-red-600">
+                                                ₹{(emp.advanceBalance || 0).toLocaleString('en-IN')}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -241,6 +247,7 @@ export default function EmployeesPage() {
                             <Input name="email" label="Email" type="email" value={formData.email} onChange={handleInputChange} />
                             <Input name="joinDate" label="Join Date" type="date" value={formData.joinDate} onChange={handleInputChange} />
                             <Input name="basicSalary" label="Basic Salary" type="number" value={formData.basicSalary} onChange={handleInputChange} />
+                            <Input name="advanceBalance" label="Advance Balance" type="number" value={formData.advanceBalance} onChange={handleInputChange} />
                         </div>
                         
                         <div className="space-y-4">

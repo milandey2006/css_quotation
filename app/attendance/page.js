@@ -121,7 +121,8 @@ export default function AttendancePage() {
     const matchesSearch = (
         row.employeeId.toLowerCase().includes(q) ||
         row.clientName.toLowerCase().includes(q) ||
-        row.areaName.toLowerCase().includes(q)
+        (row.areaName && row.areaName.toLowerCase().includes(q)) ||
+        row.workDetails.toLowerCase().includes(q)
     );
     
     // Simple date string match for now:
@@ -188,16 +189,15 @@ export default function AttendancePage() {
           }
           doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, reportEmployeeName ? 38 : 33);
           
-          // Columns
-          const tableColumn = ["Date", "Employee", "Client", "Area", "In Time", "Out Time", "Work Details"];
+          // Columns - Removed Area
+          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In Time", "Out Time"];
           const tableRows = reportRows.map(row => [
               row.date,
               row.employeeId,
               row.clientName,
-              row.areaName,
+              `${row.areaName ? `[${row.areaName}] ` : ''}${row.workDetails}`, // Merged Area into Details
               row.startTime,
-              row.endTime,
-              row.workDetails
+              row.endTime
           ]);
 
           autoTable(doc, {
@@ -210,10 +210,9 @@ export default function AttendancePage() {
                   0: { cellWidth: 22 }, // Date
                   1: { cellWidth: 25 }, // Employee
                   2: { cellWidth: 30 }, // Client
-                  3: { cellWidth: 25 }, // Area
+                  3: { cellWidth: 'auto' }, // Work Details (Expanded)
                   4: { cellWidth: 20 }, // In
                   5: { cellWidth: 20 }, // Out
-                  6: { cellWidth: 'auto' } // Details
               },
           });
 
@@ -373,7 +372,6 @@ export default function AttendancePage() {
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4">Employee</th>
                     <th className="px-6 py-4">Client</th>
-                    <th className="px-6 py-4">Area</th>
                     <th className="px-6 py-4">Work Details</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">In Time</th>
@@ -389,8 +387,11 @@ export default function AttendancePage() {
                         <td className="px-6 py-4 text-slate-600">{row.date}</td>
                         <td className="px-6 py-4 font-medium text-slate-900">{row.employeeId}</td>
                         <td className="px-6 py-4 text-slate-600">{row.clientName}</td>
-                        <td className="px-6 py-4 text-slate-600">{row.areaName}</td>
-                        <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={row.workDetails}>{row.workDetails}</td>
+
+                        <td className="px-6 py-4 text-slate-600 max-w-md" title={row.workDetails}>
+                            {row.areaName && <span className="font-semibold text-slate-500 block text-xs mb-1">[{row.areaName}]</span>}
+                            {row.workDetails}
+                        </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                             row.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :

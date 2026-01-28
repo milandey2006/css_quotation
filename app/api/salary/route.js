@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../db';
-import { salarySlips } from '../../../db/schema';
-import { desc } from 'drizzle-orm';
+import { salarySlips, employees } from '../../../db/schema';
+import { desc, eq, sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -31,6 +31,29 @@ export async function POST(request) {
         holidays: Number(body.holidays || 0),
         paidDays: Number(body.paidDays || 0),
     }).returning();
+
+    // Deduct Advance Balance from Employee if applicable
+    // If openingAdvanceBalance is provided (from UI edit), use that as base.
+    // Otherwise use SQL decrement (legacy behavior, though UI now sends it).
+    if (body.employeeId) {
+        let updateQuery = {};
+        
+        if (body.openingAdvanceBalance !== undefined) {
+             // User specified a total balance in UI (or it was auto-loaded)
+             // New Balance = Opening - CurrentDeduction
+             const newBalance = Math.max(0, Number(body.openingAdvanceBalance) - Number(body.deductions?.advance || 0));
+             updateQuery = { advanceBalance: newBalance };
+        } else if (Number(body.deductions?.advance || 0) > 0) {
+             // Fallback to direct deduction from DB value
+             updateQuery = { advanceBalance: sql`${employees.advanceBalance} - ${Number(body.deductions.advance)}` };
+        }
+
+        if (Object.keys(updateQuery).length > 0) {
+            await db.update(employees)
+                .set(updateQuery)
+                .where(eq(employees.id, Number(body.employeeId)));
+        }
+    }
 
     return NextResponse.json(newSlip[0], { status: 201 });
   } catch (error) {

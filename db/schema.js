@@ -96,6 +96,7 @@ export const employees = pgTable('employees', {
   ifscCode: text('ifsc_code'),
   joinDate: timestamp('join_date'),
   basicSalary: integer('basic_salary'),
+  advanceBalance: integer('advance_balance').default(0),
   status: text('status').default('active'), // active, inactive
   createdAt: timestamp('created_at').defaultNow(),
 });

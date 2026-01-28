@@ -23,6 +23,7 @@ export async function POST(request) {
         ...body,
         joinDate,
         basicSalary: Number(body.basicSalary || 0),
+        advanceBalance: Number(body.advanceBalance || 0),
     }).returning();
 
     return NextResponse.json(newEmployee[0], { status: 201 });

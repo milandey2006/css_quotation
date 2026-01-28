@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { salarySlips } from '../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { salarySlips, employees } from '../../../../db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 
 export async function GET(request, { params }) {
@@ -79,8 +79,19 @@ export async function PUT(request, { params }) {
         const updatedSlip = await db.update(salarySlips)
             .set(updateData)
             .where(eq(salarySlips.id, parseInt(id)))
+            .where(eq(salarySlips.id, parseInt(id)))
             .returning();
             
+        // Update Employee Balance Logic for PUT
+        // This acts as a "correction" sync. 
+        // We assume the user sees the 'Total' in UI, adjusts it if needed, and 'Remaining' is what they expect to be the new balance.
+        if (body.employeeId && body.openingAdvanceBalance !== undefined) {
+             const newBalance = Math.max(0, Number(body.openingAdvanceBalance) - Number(body.deductions?.advance || 0));
+             await db.update(employees)
+                .set({ advanceBalance: newBalance })
+                .where(eq(employees.id, Number(body.employeeId)));
+        }
+
         return NextResponse.json(updatedSlip[0]);
     } catch (error) {
         console.error('Error updating slip:', error);

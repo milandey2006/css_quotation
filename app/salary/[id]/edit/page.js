@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ChevronLeft, Save, Printer, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Save, Printer, RefreshCw, Plus, Trash2 } from 'lucide-react';
 
 // Number to Words Conversion
 function numberToWords(num) {
@@ -32,6 +32,8 @@ export default function EditSalarySlip() {
   const [isSaving, setIsSaving] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentAdvanceBalance, setCurrentAdvanceBalance] = useState(0);
+  const [advanceRows, setAdvanceRows] = useState([{ id: 1, month: '', amount: 0 }]); // Dynamic advance deductions
 
   // Initial State
   const [data, setData] = useState({
@@ -97,6 +99,14 @@ export default function EditSalarySlip() {
                         deductions,
                         dateOfJoining: fetchedData.dateOfJoining ? new Date(fetchedData.dateOfJoining).toISOString().split('T')[0] : ''
                     });
+
+                    // Load advance breakdown if available
+                    if (deductions.advanceBreakdown && Array.isArray(deductions.advanceBreakdown)) {
+                         setAdvanceRows(deductions.advanceBreakdown.map((r, i) => ({ ...r, id: i + 1 })));
+                    } else if (fetchedData.deductions?.advance > 0) {
+                         // Backwards compatibility
+                         setAdvanceRows([{ id: 1, month: 'Previous', amount: fetchedData.deductions.advance }]);
+                    }
                 }
             })
             .catch(err => console.error(err))
@@ -108,6 +118,7 @@ export default function EditSalarySlip() {
       const empId = e.target.value;
       const emp = employees.find(emp => emp.id.toString() === empId);
       if (emp) {
+         setCurrentAdvanceBalance(emp.advanceBalance || 0);
           setData(prev => ({
               ...prev,
               employeeName: emp.name,
@@ -150,6 +161,34 @@ export default function EditSalarySlip() {
       }
   }, [data.workDays, data.holidays, data.earnings.basic, loading]);
 
+  // Sync Advance Rows to Total Advance Deduction
+  useEffect(() => {
+      const totalAdvance = advanceRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      if (data.deductions && totalAdvance !== data.deductions.advance) {
+          setData(prev => ({
+              ...prev,
+              deductions: {
+                  ...prev.deductions,
+                  advance: totalAdvance
+              }
+          }));
+      }
+  }, [advanceRows]);
+
+  const handleAdvanceChange = (id, field, value) => {
+      setAdvanceRows(prev => prev.map(row => 
+          row.id === id ? { ...row, [field]: field === 'amount' ? Number(value) : value } : row
+      ));
+  };
+
+  const addAdvanceRow = () => {
+      setAdvanceRows(prev => [...prev, { id: Date.now(), month: '', amount: 0 }]);
+  };
+
+  const removeAdvanceRow = (id) => {
+      setAdvanceRows(prev => prev.filter(row => row.id !== id));
+  };
+
   // Derived Totals
   const totalEarnings = Object.values(data.earnings).reduce((a, b) => a + Number(b), 0);
   const totalDeductions = Object.values(data.deductions).reduce((a, b) => a + Number(b), 0);
@@ -172,12 +211,16 @@ export default function EditSalarySlip() {
         const payload = {
             ...data,
             earnings: data.earnings,
-            deductions: data.deductions,
+            deductions: {
+                ...data.deductions,
+                advanceBreakdown: advanceRows.filter(r => r.amount > 0)
+            },
             basicSalary: data.earnings.basic,
             advanceSalary: data.deductions.advance,
             totalEarnings,
             totalDeductions,
             netPayable: netPay,
+            openingAdvanceBalance: currentAdvanceBalance,
         };
 
         const res = await fetch(`/api/salary/${id}`, {
@@ -279,8 +322,69 @@ export default function EditSalarySlip() {
                      <h3 className="text-xs font-bold text-red-600 uppercase tracking-wider bg-red-50 inline-block px-2 py-1 rounded">Deductions (- ₹{totalDeductions})</h3>
                     <div className="space-y-3">
                         <CurrencyInput label="Professional Tax" value={data.deductions.pt} onChange={v => handleChange('deductions', 'pt', v)} />
-                        {/* Provision for Advance Salary */}
-                        <CurrencyInput label="Advance Salary Adjustment" value={data.deductions.advance} onChange={v => handleChange('deductions', 'advance', v)} active />
+                        <CurrencyInput label="Professional Tax" value={data.deductions.pt} onChange={v => handleChange('deductions', 'pt', v)} />
+                        
+                        {/* Advance Salary Dynamic Section */}
+                        <div className="bg-red-50 p-3 rounded-lg -mx-2 border border-red-100">
+                             <div className="flex justify-between items-center mb-2">
+                                <label className="text-xs font-bold text-red-700">Advance Salary Deductions</label>
+                             </div>
+
+                             {/* Dynamic Advance Balance Display */}
+                             <div className="mb-3 bg-white border border-red-200 rounded p-2 text-xs flex justify-between items-center shadow-sm">
+                                <div className="text-slate-500 flex items-center gap-2">
+                                    <span>Total:</span>
+                                    <div className="relative w-24">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                                        <input 
+                                            type="number" 
+                                            value={currentAdvanceBalance}
+                                            onChange={(e) => setCurrentAdvanceBalance(Number(e.target.value))}
+                                            className="w-full pl-5 pr-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="text-red-700 font-bold flex items-center gap-1">
+                                    <span>Remaining:</span>
+                                    <span className="text-sm">₹{Math.max(0, currentAdvanceBalance - data.deductions.advance)}</span>
+                                </div>
+                             </div>
+
+                             <div className="space-y-2 mb-2">
+                                {advanceRows.map((row, index) => (
+                                    <div key={row.id} className="flex gap-2 items-center">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Month (e.g. Feb)" 
+                                            className="flex-1 px-2 py-1.5 text-xs border border-red-200 rounded focus:outline-none focus:ring-1 focus:ring-red-500 text-red-800 placeholder:text-red-300"
+                                            value={row.month}
+                                            onChange={(e) => handleAdvanceChange(row.id, 'month', e.target.value)}
+                                        />
+                                        <div className="relative w-24">
+                                            <input 
+                                                type="number" 
+                                                placeholder="Amt"
+                                                className="w-full px-2 py-1.5 text-xs border border-red-200 rounded focus:outline-none focus:ring-1 focus:ring-red-500 text-red-800 font-mono text-right"
+                                                value={row.amount || ''}
+                                                onChange={(e) => handleAdvanceChange(row.id, 'amount', e.target.value)}
+                                            />
+                                        </div>
+                                        {advanceRows.length > 1 && (
+                                            <button onClick={() => removeAdvanceRow(row.id)} className="text-red-400 hover:text-red-600">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                             </div>
+                             
+                             <button 
+                                onClick={addAdvanceRow}
+                                className="w-full py-2 flex items-center justify-center gap-1 text-[10px] uppercase font-bold text-red-600 bg-white border border-red-200 rounded hover:bg-red-50 transition-colors shadow-sm"
+                             >
+                                <Plus className="w-3 h-3" /> Add Advance Salary for Month
+                             </button>
+                        </div>
                     </div>
                 </section>
                 
@@ -400,7 +504,10 @@ export default function EditSalarySlip() {
                              {data.deductions.leaveDeduction > 0 && (
                                 <TableRow label={`Leaves (${data.holidays} days)`} value={data.deductions.leaveDeduction} highlight />
                              )}
-                             <TableRow label="Advance Salary" value={data.deductions.advance} highlight />
+                              {advanceRows.filter(r => r.amount > 0).map(row => (
+                                  <TableRow key={row.id} label={`Advance Salary (${row.month || 'Deduction'})`} value={row.amount} highlight />
+                              ))}
+                              {advanceRows.filter(r => r.amount > 0).length === 0 && data.deductions.advance > 0 && <TableRow label="Advance Salary" value={data.deductions.advance} highlight />}
                              <div className="p-2">&nbsp;</div>
                          </div>
                      </div>
@@ -430,9 +537,16 @@ export default function EditSalarySlip() {
                             {netPay > 0 ? `Rupees ${numberToWords(Math.floor(netPay))} Only` : 'Zero Rupees'}
                         </p>
                     </div>
-                    {data.utrNo && (
+                     {data.utrNo && (
                         <div className="mt-2 pt-2 border-t border-emerald-200">
                             <p className="text-xs text-slate-600">Payment Reference (UTR): <span className="font-mono font-bold text-black">{data.utrNo}</span></p>
+                        </div>
+                    )}
+                    
+                    {currentAdvanceBalance > 0 && (
+                        <div className="mt-2 pt-2 border-t border-emerald-200 text-xs text-red-700 flex justify-between items-center">
+                            <span>Outstanding Advance Balance:</span>
+                            <span className="font-bold font-mono">₹{(currentAdvanceBalance - data.deductions.advance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                     )}
                 </div>

@@ -15,6 +15,7 @@ export async function PUT(request, { params }) {
         ...body,
         joinDate,
         basicSalary: Number(body.basicSalary || 0),
+        advanceBalance: Number(body.advanceBalance || 0),
       })
       .where(eq(employees.id, id))
       .returning();

@@ -92,6 +92,17 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
     }
   }, [id, cloneId]);
 
+  // Update document title for PDF filename
+  useEffect(() => {
+    if (data.subject || data.receiver.name || data.receiver.company) {
+        const client = data.receiver.name || data.receiver.company || 'Client';
+        const subject = data.subject || 'Quotation';
+        document.title = `${subject} - ${client}`;
+    } else {
+        document.title = 'Champion Security System Quotation';
+    }
+  }, [data.subject, data.receiver.name, data.receiver.company]);
+
 
   const handleDeepChange = (section, field, value) => {
     if (section === 'meta') {

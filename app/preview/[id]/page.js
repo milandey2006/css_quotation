@@ -48,6 +48,15 @@ export default function PreviewPage({ params }) {
     fetchData();
   }, [params, type]);
 
+  // Dynamic Title for PDF
+  useEffect(() => {
+     if (data) {
+        const client = data.receiver?.name || data.receiver?.company || data.clientName || 'Client';
+        const docSubject = data.subject || (type === 'Estimate' ? 'Estimate' : 'Quotation');
+        document.title = `${docSubject} - ${client}`;
+     }
+  }, [data, type]);
+
   if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   if (error) return <div className="flex items-center justify-center min-h-screen text-red-600">{error}</div>;
   if (!data) return <div className="flex items-center justify-center min-h-screen">No data found</div>;

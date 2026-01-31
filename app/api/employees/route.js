@@ -18,9 +18,15 @@ export async function POST(request) {
     const body = await request.json();
     
     const joinDate = body.joinDate ? new Date(body.joinDate) : null;
+    
+    // Generate Custom Employee ID
+    // Logic: CSS + 8 random digits
+    const random8 = Math.floor(10000000 + Math.random() * 90000000);
+    const employeeCode = `CSS${random8}`;
 
     const newEmployee = await db.insert(employees).values({
         ...body,
+        employeeCode, // Save the custom code
         joinDate,
         basicSalary: Number(body.basicSalary || 0),
         advanceBalance: Number(body.advanceBalance || 0),

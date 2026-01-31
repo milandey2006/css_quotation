@@ -85,7 +85,9 @@ export default function QuotationList() {
   const filteredQuotations = quotations.filter(q => 
     (q.clientName && q.clientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (q.quotationNo && q.quotationNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.data?.receiver?.phone && q.data.receiver.phone.toLowerCase().includes(searchTerm.toLowerCase()))
+    (q.data?.receiver?.phone && q.data.receiver.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (q.data?.receiver?.company && q.data.receiver.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (q.data?.receiver?.name && q.data.receiver.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -139,6 +141,7 @@ export default function QuotationList() {
                   <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     <th className="px-6 py-4">Quotation No</th>
                     <th className="px-6 py-4">Client</th>
+                    <th className="px-6 py-4">Subject</th>
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4">Total Amount</th>
                     <th className="px-6 py-4">Status</th>
@@ -166,6 +169,9 @@ export default function QuotationList() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-slate-800">{q.clientName}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-slate-600 text-sm truncate max-w-[200px]" title={q.data?.subject}>{q.data?.subject || '-'}</div>
                         </td>
                         <td className="px-6 py-4 text-slate-500 text-sm">
                           {new Date(q.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}

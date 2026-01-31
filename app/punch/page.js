@@ -15,9 +15,8 @@ export default function PunchPage() {
     }
   }, [isLoaded, user]);
 
-  const [clientName, setClientName] = useState('');
-  const [areaName, setAreaName] = useState('');
-  const [workDetails, setWorkDetails] = useState('');
+
+  const [workDetails, setWorkDetails] = useState('Office Punch In');
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);
@@ -29,9 +28,9 @@ export default function PunchPage() {
   }, []);
 
   const handlePunch = (type) => {
-    if (!employeeId.trim() || !clientName.trim() || !areaName.trim()) {
+    if (!employeeId.trim()) {
       setStatus('error');
-      setMessage('Please enter Employee ID, Client Name, and Area Name.');
+      setMessage('Please enter Employee ID.');
       return;
     }
 
@@ -63,8 +62,8 @@ export default function PunchPage() {
     try {
       const payload = {
         employeeId,
-        clientName,
-        areaName,
+        clientName: 'Office',
+        areaName: 'Office',
         workDetails,
         type, 
         location: { lat, lng }
@@ -103,8 +102,8 @@ export default function PunchPage() {
           <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
             <Smartphone className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Mobile Attendance</h1>
-          <p className="text-blue-100 text-sm mt-1">Acme Construction Co.</p>
+          <h1 className="text-2xl font-bold">Office Attendance</h1>
+          <p className="text-blue-100 text-sm mt-1">Champion Security System</p>
         </div>
 
         {/* Clock Section */}
@@ -130,37 +129,18 @@ export default function PunchPage() {
             />
           </div>
 
-          <div>
-             <label className="block text-slate-400 text-sm font-medium mb-2">Client Name</label>
-             <input 
-               type="text" 
-               value={clientName}
-               onChange={(e) => setClientName(e.target.value)}
-               placeholder="e.g. Acme Corp"
-               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg"
-             />
-          </div>
+
 
           <div>
-             <label className="block text-slate-400 text-sm font-medium mb-2">Area Name</label>
-             <input 
-               type="text" 
-               value={areaName}
-               onChange={(e) => setAreaName(e.target.value)}
-               placeholder="e.g. Building A"
-               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg"
-             />
-          </div>
-
-          <div>
-             <label className="block text-slate-400 text-sm font-medium mb-2">Work Details</label>
-             <textarea 
-               rows="2"
+             <label className="block text-slate-400 text-sm font-medium mb-2">Punch Type</label>
+             <select 
                value={workDetails}
                onChange={(e) => setWorkDetails(e.target.value)}
-               placeholder="Describe work done..."
-               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg resize-none"
-             />
+               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg"
+             >
+                <option value="Office Punch In">Office Punch In</option>
+                <option value="Office Punch Out">Office Punch Out</option>
+             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

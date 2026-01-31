@@ -84,6 +84,7 @@ export const salarySlips = pgTable('salary_slips', {
 
 export const employees = pgTable('employees', {
   id: serial('id').primaryKey(),
+  employeeCode: text('employee_code').unique(), // New custom ID: CSS + 8 digits
   name: text('name').notNull(),
   designation: text('designation'),
   mobile: text('mobile'),

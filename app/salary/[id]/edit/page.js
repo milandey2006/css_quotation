@@ -122,12 +122,12 @@ export default function EditSalarySlip() {
           setData(prev => ({
               ...prev,
               employeeName: emp.name,
+              employeeId: emp.employeeCode || emp.id.toString(),
+              dateOfJoining: emp.joinDate ? new Date(emp.joinDate).toISOString().split('T')[0] : '',
               designation: emp.designation || '',
               panNo: emp.panNo || '',
               aadhaarNo: emp.aadhaarNo || '',
               uanNo: emp.uanNo || '',
-              // Optional: Update basic if you want to reset it found in employee master
-              // earnings: { ...prev.earnings, basic: emp.basicSalary || prev.earnings.basic }
           }));
       }
   };
@@ -190,8 +190,16 @@ export default function EditSalarySlip() {
   };
 
   // Derived Totals
-  const totalEarnings = Object.values(data.earnings).reduce((a, b) => a + Number(b), 0);
-  const totalDeductions = Object.values(data.deductions).reduce((a, b) => a + Number(b), 0);
+  const totalEarnings = Object.values(data.earnings).reduce((a, b) => {
+      const val = Number(b);
+      return a + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const totalDeductions = Object.values(data.deductions).reduce((a, b) => {
+      const val = Number(b);
+      return a + (isNaN(val) ? 0 : val);
+  }, 0);
+
   const netPay = totalEarnings - totalDeductions;
 
   const handleChange = (section, field, value) => {

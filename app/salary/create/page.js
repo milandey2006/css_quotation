@@ -54,6 +54,8 @@ export default function CreateSalarySlip() {
           setData(prev => ({
               ...prev,
               employeeName: emp.name,
+              employeeId: emp.employeeCode || emp.id.toString(), // Use custom code or fallback to ID
+              dateOfJoining: emp.joinDate ? new Date(emp.joinDate).toISOString().split('T')[0] : '',
               designation: emp.designation || '',
               panNo: emp.panNo || '',
               aadhaarNo: emp.aadhaarNo || '',

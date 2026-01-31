@@ -341,6 +341,11 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
                              </svg>
                           </button>
 
+                          {/* Serial Number */}
+                          <div className="absolute left-0 top-0 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-br-lg rounded-tl-lg z-10 shadow-sm">
+                              #{index + 1}
+                          </div>
+
                           {/* Item Fields */}
                           <div className="space-y-3">
                             <input

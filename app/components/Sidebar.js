@@ -31,7 +31,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleSidebar }) => {
     { name: 'Salary Slips', icon: FileText, href: '/salary', roles: ['admin'] }, 
     { name: 'Employees', icon: User, href: '/employees', roles: ['admin'] },
     { name: 'Attendance', icon: Clock, href: '/attendance', roles: ['admin'] },
-    { name: 'Punch In/Out', icon: Clock, href: '/punch', roles: ['user'] },
+    { name: 'Office Attendance', icon: Clock, href: '/punch', roles: ['user'] },
     { name: 'Work List', icon: Briefcase, href: '/works', roles: ['admin', 'user'] },
     { name: 'Assign Work', icon: User, href: '/works/create', roles: ['admin'] },
     { name: 'Settings', icon: Settings, href: '/settings', roles: ['admin'] },

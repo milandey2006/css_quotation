@@ -12,6 +12,13 @@ export default function WorksPage() {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 9;
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
 
   // Edit Modal State
@@ -208,6 +215,21 @@ export default function WorksPage() {
       );
   });
 
+  // Sort works: Pending first, then by date
+  const sortedWorks = [...filteredWorks].sort((a, b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentWorks = sortedWorks.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedWorks.length / ITEMS_PER_PAGE);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   const { user } = useUser();
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
@@ -273,139 +295,176 @@ export default function WorksPage() {
                     <p>No matching works found.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredWorks.map((work) => (
-                        <div key={work.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow relative group">
-                            
-                             {/* Admin Actions */}
-                             {isAdmin && (
-                                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button 
-                                        onClick={() => handleEditClick(work)}
-                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                        title="Edit Work"
-                                    >
-                                        <Edit className="w-4 h-4" />
-                                    </button>
-                                    <button 
-                                        onClick={() => deleteWork(work.id)}
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                        title="Delete Work"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                             )}
-
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-4 pr-16"> {/* Increased padding-right for buttons */}
-                                    <h3 className="font-bold text-lg text-slate-900">{work.clientName}</h3>
-                                    <select 
-                                        value={work.status || 'pending'}
-                                        onChange={(e) => updateStatus(work.id, e.target.value)}
-                                        className={`text-xs font-medium px-2 py-1 rounded-full border focus:outline-none cursor-pointer ${getStatusColor(work.status)}`}
-                                    >
-                                        <option value="pending">Pending</option>
-                                        <option value="active">Active</option>
-                                        <option value="completed">Completed</option>
-                                        <option value="cancelled">Cancelled</option>
-                                    </select>
-                                </div>
+                <div className="flex flex-col gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {currentWorks.map((work) => (
+                            <div key={work.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow relative group">
                                 
-                                <div className="space-y-3 text-sm text-slate-600 mb-6">
-                                    {work.clientPhone && (
-                                        <div className="flex items-center gap-2">
-                                            <Phone className="w-4 h-4 text-slate-400" />
-                                            <a href={`tel:${work.clientPhone}`} className="hover:text-blue-600 font-medium">
-                                                {work.clientPhone}
-                                            </a>
-                                        </div>
-                                    )}
-                                    
-                                    {work.clientAddress && (
-                                        <div className="flex items-start gap-2">
-                                            <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
-                                            <span>{work.clientAddress}</span>
-                                        </div>
-                                    )}
-
-                                    {work.instructions && (
-                                         <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 text-slate-700 italic">
-                                            "{work.instructions}"
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Assignment Section */}
-                                <div className="mb-4">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Assigned To (Multi-Select)</label>
-                                    <div className="flex flex-wrap gap-2 mb-2">
-                                        {users.map(u => {
-                                            const isAssigned = (work.userIds && work.userIds.includes(u.id)) || work.userId === u.id;
-                                            return (
-                                                <button
-                                                    key={u.id}
-                                                    onClick={() => {
-                                                        const currentIds = work.userIds || (work.userId ? [work.userId] : []);
-                                                        const newIds = isAssigned 
-                                                            ? currentIds.filter(id => id !== u.id)
-                                                            : [...currentIds, u.id];
-                                                        assignUser(work.id, newIds);
-                                                    }}
-                                                    className={`text-xs px-2 py-1 rounded-md border transition-all ${
-                                                        isAssigned 
-                                                            ? 'bg-blue-100 text-blue-700 border-blue-200 font-bold' 
-                                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                                                    }`}
-                                                >
-                                                    {u.name}
-                                                    {isAssigned && <CheckCircle className="w-3 h-3 inline-block ml-1" />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Punch Buttons */}
-                                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 mb-4">
-                                    <button
-                                        onClick={() => handlePunch(work, 'in')}
-                                        disabled={punchLoading[work.id]}
-                                        className="flex items-center justify-center gap-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-md shadow-emerald-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                                    >
-                                        <MapPin className="w-4 h-4" />
-                                        {punchLoading[work.id] ? '...' : 'Punch IN'}
-                                    </button>
-                                    <button
-                                        onClick={() => handlePunch(work, 'out')}
-                                        disabled={punchLoading[work.id]}
-                                        className="flex items-center justify-center gap-2 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-sm shadow-md shadow-rose-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                                    >
-                                        <Clock className="w-4 h-4" />
-                                        {punchLoading[work.id] ? '...' : 'Punch OUT'}
-                                    </button>
-                                </div>
-
-                                <div className="flex gap-3 pt-4 border-t border-slate-100">
-                                    {work.clientAddress && (
-                                        <a 
-                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(work.clientAddress)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm"
+                                {/* Admin Actions */}
+                                {isAdmin && (
+                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                                        <button 
+                                            onClick={() => handleEditClick(work)}
+                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all bg-white shadow-sm"
+                                            title="Edit Work"
                                         >
-                                            <Navigation className="w-4 h-4" />
-                                            Navigate
-                                        </a>
-                                    )}
-                                    <div className="text-xs text-slate-400 flex items-center gap-1 ml-auto self-center">
-                                        <Clock className="w-3 h-3" />
-                                        {new Date(work.createdAt).toLocaleDateString()}
+                                            <Edit className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button 
+                                            onClick={() => deleteWork(work.id)}
+                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all bg-white shadow-sm"
+                                            title="Delete Work"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="p-4">
+                                    <div className="flex justify-between items-start mb-2 pr-12"> 
+                                        <h3 className="font-bold text-base text-slate-900 leading-tight">{work.clientName}</h3>
+                                        <select 
+                                            value={work.status || 'pending'}
+                                            onChange={(e) => updateStatus(work.id, e.target.value)}
+                                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border focus:outline-none cursor-pointer ${getStatusColor(work.status)}`}
+                                        >
+                                            <option value="pending">Pending</option>
+                                            <option value="active">Active</option>
+                                            <option value="completed">Done</option>
+                                            <option value="cancelled">Cancel</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div className="space-y-1.5 text-sm text-slate-600 mb-3">
+                                        {work.clientPhone && (
+                                            <div className="flex items-center gap-2">
+                                                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                <a href={`tel:${work.clientPhone}`} className="hover:text-blue-600 font-medium text-xs">
+                                                    {work.clientPhone}
+                                                </a>
+                                            </div>
+                                        )}
+                                        
+                                        {work.clientAddress && (
+                                            <div className="flex items-start gap-2">
+                                                <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+                                                <span className="text-xs line-clamp-2">{work.clientAddress}</span>
+                                            </div>
+                                        )}
+
+                                        {work.instructions && (
+                                            <div className="mt-2 p-2 bg-slate-50 rounded border border-slate-100 text-slate-700 italic text-xs line-clamp-2">
+                                                "{work.instructions}"
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Assignment Section */}
+                                    <div className="mb-3">
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {users.map(u => {
+                                                const isAssigned = (work.userIds && work.userIds.includes(u.id)) || work.userId === u.id;
+                                                return (
+                                                    <button
+                                                        key={u.id}
+                                                        onClick={() => {
+                                                            const currentIds = work.userIds || (work.userId ? [work.userId] : []);
+                                                            const newIds = isAssigned 
+                                                                ? currentIds.filter(id => id !== u.id)
+                                                                : [...currentIds, u.id];
+                                                            assignUser(work.id, newIds);
+                                                        }}
+                                                        className={`text-[10px] px-1.5 py-0.5 rounded border transition-all ${
+                                                            isAssigned 
+                                                                ? 'bg-blue-100 text-blue-700 border-blue-200 font-bold' 
+                                                                : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        {u.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Punch Buttons */}
+                                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 mb-2">
+                                        <button
+                                            onClick={() => handlePunch(work, 'in')}
+                                            disabled={punchLoading[work.id]}
+                                            className="flex items-center justify-center gap-1.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-xs shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            <MapPin className="w-3 h-3" />
+                                            {punchLoading[work.id] ? '...' : 'IN'}
+                                        </button>
+                                        <button
+                                            onClick={() => handlePunch(work, 'out')}
+                                            disabled={punchLoading[work.id]}
+                                            className="flex items-center justify-center gap-1.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold text-xs shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            <Clock className="w-3 h-3" />
+                                            {punchLoading[work.id] ? '...' : 'OUT'}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2 border-t border-slate-100">
+                                        {work.clientAddress && (
+                                            <a 
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(work.clientAddress)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors font-medium text-xs"
+                                            >
+                                                <Navigation className="w-3 h-3" />
+                                                Navigate
+                                            </a>
+                                        )}
+                                        <div className="text-[10px] text-slate-400 flex items-center gap-1 ml-auto self-center">
+                                            <Clock className="w-3 h-3" />
+                                            {new Date(work.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        ))}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-8">
+                            <button
+                                onClick={() => paginate(Math.max(1, currentPage - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1 rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                Previous
+                            </button>
+                            
+                            <div className="flex gap-1">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+                                    <button
+                                        key={number}
+                                        onClick={() => paginate(number)}
+                                        className={`w-8 h-8 rounded flex items-center justify-center text-sm font-medium transition-colors ${
+                                            currentPage === number
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        {number}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-1 rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                Next
+                            </button>
                         </div>
-                    ))}
+                    )}
                 </div>
             )}
         </div>

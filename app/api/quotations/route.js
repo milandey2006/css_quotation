@@ -4,9 +4,18 @@ import { quotations } from '../../../db/schema';
 import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const allQuotations = await db.select().from(quotations).orderBy(desc(quotations.createdAt));
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit');
+
+    let query = db.select().from(quotations).orderBy(desc(quotations.createdAt));
+
+    if (limit) {
+        query = query.limit(parseInt(limit));
+    }
+
+    const allQuotations = await query;
     return NextResponse.json(allQuotations);
   } catch (error) {
     console.error('Error fetching quotations:', error);

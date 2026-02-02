@@ -20,6 +20,8 @@ export default function QuotationList() {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -50,8 +52,8 @@ export default function QuotationList() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-              status: newStatus,
-              ...quotations.find(q => q.id === id)
+              ...quotations.find(q => q.id === id),
+              status: newStatus
            })
         });
 
@@ -89,6 +91,25 @@ export default function QuotationList() {
     (q.data?.receiver?.company && q.data.receiver.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (q.data?.receiver?.name && q.data.receiver.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentQuotations = filteredQuotations.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredQuotations.length / itemsPerPage);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans relative overflow-x-hidden">
@@ -155,14 +176,14 @@ export default function QuotationList() {
                         Loading documents...
                       </td>
                     </tr>
-                  ) : filteredQuotations.length === 0 ? (
+                  ) : currentQuotations.length === 0 ? (
                      <tr>
                       <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
                         No quotations found. Click "Create Quotation" to start.
                       </td>
                     </tr>
                   ) : (
-                    filteredQuotations.map((q) => (
+                    currentQuotations.map((q) => (
                       <tr key={q.id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-6 py-4">
                           <span className="font-medium text-slate-700">{q.quotationNo}</span>
@@ -256,8 +277,29 @@ export default function QuotationList() {
               </table>
             </div>
             
-             <div className="p-4 border-t border-slate-100 flex justify-center text-xs text-slate-400">
-                End of list
+             <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="text-sm text-slate-500">
+                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuotations.length)} of {filteredQuotations.length} entries
+                </div>
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={goToPreviousPage} 
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-white transition-colors"
+                    >
+                        Previous
+                    </button>
+                    <span className="text-sm font-medium text-slate-700 bg-white px-3 py-1 rounded-lg border border-slate-200">
+                        Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button 
+                        onClick={goToNextPage} 
+                        disabled={currentPage === totalPages || totalPages === 0}
+                        className="px-3 py-1 text-sm border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-white transition-colors"
+                    >
+                        Next
+                    </button>
+                </div>
             </div>
           </div>
 

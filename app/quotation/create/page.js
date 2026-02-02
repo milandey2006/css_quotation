@@ -79,15 +79,67 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
                     
                     if (cloneId) {
                         // If cloning, reset specific fields to make it a "new" entry
-                        loadedData.quotationNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/`; 
-                        loadedData.date = new Date().toISOString().split('T')[0];
-                        loadedData.validTill = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                        // We still want to generate a NEW number for the clone, not use the old one
+                        fetch('/api/quotations?limit=1')
+                            .then(res => res.json())
+                            .then(latest => {
+                                let nextNum = 261;
+                                if (latest && latest.length > 0) {
+                                    const lastNo = latest[0].quotationNo;
+                                    const parts = lastNo.split('/');
+                                    const lastNumStr = parts[parts.length - 1];
+                                    const parsedDetails = parseInt(lastNumStr);
+                                    if (!isNaN(parsedDetails)) {
+                                        nextNum = parsedDetails + 1;
+                                    }
+                                }
+                                loadedData.quotationNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/${nextNum}`;
+                                loadedData.date = new Date().toISOString().split('T')[0];
+                                loadedData.validTill = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                setData(loadedData);
+                            })
+                            .catch(err => {
+                                console.error("Error fetching latest for clone:", err)
+                                // Fallback
+                                loadedData.quotationNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/261`;
+                                loadedData.date = new Date().toISOString().split('T')[0];
+                                loadedData.validTill = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                setData(loadedData);
+                            });
+                    } else {
+                         setData(loadedData);
                     }
-                    
-                    setData(loadedData);
                 }
             })
             .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    } else {
+        // New Quotation - Fetch latest ID
+        setLoading(true);
+        fetch('/api/quotations?limit=1')
+            .then(res => res.json())
+            .then(latest => {
+                let nextNum = 261;
+                if (latest && latest.length > 0) {
+                    const lastNo = latest[0].quotationNo;
+                    // Expected format: CSS/FEB/2026/261
+                    const parts = lastNo.split('/');
+                    const lastNumStr = parts[parts.length - 1];
+                    const parsedDetails = parseInt(lastNumStr);
+                    if (!isNaN(parsedDetails)) {
+                        nextNum = parsedDetails + 1;
+                    }
+                }
+                
+                const newNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/${nextNum}`;
+                setData(prev => ({ ...prev, quotationNo: newNo }));
+            })
+            .catch(err => {
+                console.error("Error generating new number:", err);
+                // Fallback handled by initial state, but let's update strict
+                 const newNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/261`;
+                 setData(prev => ({ ...prev, quotationNo: newNo }));
+            })
             .finally(() => setLoading(false));
     }
   }, [id, cloneId]);

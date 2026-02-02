@@ -134,8 +134,13 @@ export default function AttendancePage() {
     return matchesSearch && matchesDate;
   });
 
-  const handleExportReport = () => {
-      console.log("Export button clicked");
+
+  // Preview State
+  const [previewData, setPreviewData] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const handlePreviewReport = () => {
+      console.log("preview button clicked");
       if (!reportStartDate || !reportEndDate) {
           alert("Please select both Start Date and End Date for the report.");
           return;
@@ -153,8 +158,7 @@ export default function AttendancePage() {
           }
 
           console.log(`Filtering from ${start} to ${end}`);
-          console.log("Total processed rows:", processedRows.length);
-
+          
           // Filter rows for report
           const reportRows = processedRows.filter(row => {
               const rowDate = new Date(row.rawDate); // Ensure it is a date
@@ -167,13 +171,22 @@ export default function AttendancePage() {
               return inDateRange && nameMatch;
           });
 
-          console.log("Rows matching criteria:", reportRows.length);
-
           if (reportRows.length === 0) {
               alert("No records found for the selected criteria.");
               return;
           }
 
+          setPreviewData(reportRows);
+          setShowPreview(true);
+
+      } catch (err) {
+          console.error("Preview Error:", err);
+          alert("An error occurred while generating the preview.");
+      }
+  };
+
+  const generatePDF = () => {
+       try {
           // Generate PDF
           const doc = new jsPDF();
           console.log("PDF Document created");
@@ -189,15 +202,17 @@ export default function AttendancePage() {
           }
           doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, reportEmployeeName ? 38 : 33);
           
+
           // Columns - Removed Area
-          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In Time", "Out Time"];
-          const tableRows = reportRows.map(row => [
+          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In Time", "Out Time", "Duration"];
+          const tableRows = previewData.map(row => [
               row.date,
               row.employeeId,
               row.clientName,
               `${row.areaName ? `[${row.areaName}] ` : ''}${row.workDetails}`, // Merged Area into Details
               row.startTime,
-              row.endTime
+              row.endTime,
+              row.hours
           ]);
 
           autoTable(doc, {
@@ -207,24 +222,25 @@ export default function AttendancePage() {
               styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
               headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
               columnStyles: {
-                  0: { cellWidth: 22 }, // Date
+                  0: { cellWidth: 20 }, // Date
                   1: { cellWidth: 25 }, // Employee
                   2: { cellWidth: 30 }, // Client
                   3: { cellWidth: 'auto' }, // Work Details (Expanded)
-                  4: { cellWidth: 20 }, // In
-                  5: { cellWidth: 20 }, // Out
+                  4: { cellWidth: 15 }, // In
+                  5: { cellWidth: 15 }, // Out
+                  6: { cellWidth: 20 }, // Duration
               },
           });
 
           const fileNameData = reportEmployeeName ? `_${reportEmployeeName.replace(/\s+/g, '_')}` : '';
           doc.save(`Attendance_Report${fileNameData}_${reportStartDate}_to_${reportEndDate}.pdf`);
           console.log("PDF saved");
-
       } catch (err) {
           console.error("Export Error:", err);
-          alert("An error occurred while exporting the report. Check console for details.");
+          alert("An error occurred while exporting the report.");
       }
   };
+
 
   const handleDelete = async (row) => {
       if (!confirm(`Are you sure you want to delete attendance for ${row.employeeId} on ${row.date}?`)) return;
@@ -249,7 +265,7 @@ export default function AttendancePage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
+    <div className="flex h-screen bg-slate-50 font-sans relative">
        {/* Mobile Menu Button - Consistent Header Style */}
        <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 p-4 z-40 flex justify-between items-center shadow-sm h-16">
           <div className="font-bold text-slate-800">Champion Security</div>
@@ -323,11 +339,11 @@ export default function AttendancePage() {
                     />
                  </div>
                  <button 
-                    onClick={handleExportReport}
+                    onClick={handlePreviewReport}
                     className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md transition-all shadow-blue-200"
                  >
                     <FileDown className="w-4 h-4" />
-                    Export PDF
+                    View Report
                  </button>
             </div>
           </div>
@@ -438,10 +454,80 @@ export default function AttendancePage() {
               </table>
             </div>
           </div>
-
-
         </div>
       </main>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900">Report Preview</h2>
+                        <p className="text-sm text-slate-500">
+                            {previewData.length} records found from {new Date(reportStartDate).toLocaleDateString()} to {new Date(reportEndDate).toLocaleDateString()}
+                        </p>
+                    </div>
+                    <button 
+                        onClick={() => setShowPreview(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                    >
+                        <Trash2 className="w-6 h-6 rotate-45" /> {/* Using Trash2 as Close icon roughly */}
+                    </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-6">
+                    <table className="w-full text-sm text-left border border-slate-200 rounded-lg">
+                        <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                            <tr>
+                                <th className="px-4 py-2">Date</th>
+                                <th className="px-4 py-2">Employee</th>
+                                <th className="px-4 py-2">Client</th>
+                                <th className="px-4 py-2">Work Details</th>
+                                <th className="px-4 py-2">Time</th>
+                                <th className="px-4 py-2">Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {previewData.map((row, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50">
+                                    <td className="px-4 py-2 text-slate-600">{row.date}</td>
+                                    <td className="px-4 py-2 font-medium text-slate-900">{row.employeeId}</td>
+                                    <td className="px-4 py-2 text-slate-600">{row.clientName}</td>
+                                    <td className="px-4 py-2 text-slate-600">
+                                        {row.areaName && `[${row.areaName}] `}{row.workDetails}
+                                    </td>
+                                    <td className="px-4 py-2 text-slate-600 font-mono text-xs">
+                                        {row.startTime} - {row.endTime}
+                                    </td>
+                                    <td className="px-4 py-2 text-slate-600 font-mono text-xs">
+                                        {row.hours}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="p-6 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
+                    <button 
+                        onClick={() => setShowPreview(false)}
+                        className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-medium transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={generatePDF}
+                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md transition-all shadow-blue-200"
+                    >
+                        <FileDown className="w-4 h-4" />
+                        Download PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
     </div>
   );
 }

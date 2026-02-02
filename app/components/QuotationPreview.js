@@ -177,14 +177,14 @@ const QuotationPreview = ({ data }) => {
                 </div>
 
                 <div className="mb-6 text-center">
-                    <h3 className="text-lg font-bold text-black underline uppercase tracking-wide">
+                    <h3 className="text-md font-bold text-black underline tracking-wide">
                         {safeData.type === 'Proforma' ? 'PROFORMA INVOICE' : `Sub:- ${safeData.subject || ''}`}
                     </h3>
                 </div>
 
                 <div className="flex justify-between items-start mb-6 px-8">
                       <div className="text-sm text-gray-800 w-1/2">
-                         <p className="font-bold text-lg text-blue-900">{safeData.receiver?.company || 'Client Company'}</p>
+                         <p className="font-bold text-md text-blue-900">{safeData.receiver?.company || 'Client Company'}</p>
                          <p className="font-semibold">{safeData.receiver?.name}</p>
                          <p className="text-gray-700 whitespace-pre-wrap">{safeData.receiver?.address}</p>
                          {safeData.receiver?.phone && <p className="font-semibold mt-1">Ph: {safeData.receiver.phone}</p>}

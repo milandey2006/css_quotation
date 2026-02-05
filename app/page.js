@@ -1,11 +1,17 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import Sidebar from './components/Sidebar';
 import { DashboardStats } from './components/DashboardStats';
-import { DashboardCharts } from './components/DashboardCharts';
+
+
+const DashboardCharts = dynamic(() => import('./components/DashboardCharts').then(mod => mod.DashboardCharts), { 
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full bg-slate-50 animate-pulse rounded-2xl"></div>
+});
 import { 
   Search, 
   Filter, 

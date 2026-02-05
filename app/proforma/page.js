@@ -32,12 +32,22 @@ export default function ProformaList() {
     setLoading(true);
     try {
       const res = await fetch('/api/proformas');
+      if (!res.ok) {
+        throw new Error('Failed to fetch');
+      }
       const data = await res.json();
-      setInvoices(data);
-      setLoading(false);
+      
+      if (Array.isArray(data)) {
+        setInvoices(data);
+      } else {
+        console.error('API returned non-array data:', data);
+        setInvoices([]);
+      }
     } catch (error) {
       console.error('Error fetching proformas:', error);
-      setLoading(false);
+      setInvoices([]);
+    } finally {
+        setLoading(false);
     }
   };
 

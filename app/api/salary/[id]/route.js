@@ -79,17 +79,16 @@ export async function PUT(request, { params }) {
         const updatedSlip = await db.update(salarySlips)
             .set(updateData)
             .where(eq(salarySlips.id, parseInt(id)))
-            .where(eq(salarySlips.id, parseInt(id)))
             .returning();
             
         // Update Employee Balance Logic for PUT
-        // This acts as a "correction" sync. 
-        // We assume the user sees the 'Total' in UI, adjusts it if needed, and 'Remaining' is what they expect to be the new balance.
         if (body.employeeId && body.openingAdvanceBalance !== undefined) {
              const newBalance = Math.max(0, Number(body.openingAdvanceBalance) - Number(body.deductions?.advance || 0));
+             
+             // Try to update by Code first
              await db.update(employees)
                 .set({ advanceBalance: newBalance })
-                .where(eq(employees.id, Number(body.employeeId)));
+                .where(eq(employees.employeeCode, body.employeeId));
         }
 
         return NextResponse.json(updatedSlip[0]);

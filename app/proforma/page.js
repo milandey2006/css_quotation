@@ -12,7 +12,8 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Share2
 } from 'lucide-react';
 
 export default function ProformaList() {
@@ -231,6 +232,24 @@ export default function ProformaList() {
                               >
                                 <Edit className="w-4 h-4" />
                               </Link>
+                            </ActionTooltip>
+
+                            <ActionTooltip content="Share">
+                              <button 
+                                onClick={() => {
+                                    if (!q.publicId) {
+                                        alert('This proforma is from an older version and does not have a shareable link yet.\n\nPlease click "Edit" and then "Save" once to generate a link.');
+                                        return;
+                                    }
+                                    const shareUrl = `https://css-quotation.vercel.app/share/${q.publicId}`;
+                                    navigator.clipboard.writeText(shareUrl)
+                                        .then(() => alert('Share link copied to clipboard!'))
+                                        .catch(() => alert('Failed to copy link.'));
+                                }}
+                                className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </button>
                             </ActionTooltip>
 
                             <ActionTooltip content="Delete">

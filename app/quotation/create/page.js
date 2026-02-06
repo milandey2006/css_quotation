@@ -75,7 +75,12 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
             })
             .then(quotation => {
                 if (quotation.data) {
-                    const loadedData = { ...quotation.data, type: 'Quotation', fixedType: true };
+                    const loadedData = { 
+                        ...quotation.data, 
+                        type: 'Quotation', 
+                        fixedType: true,
+                        publicId: quotation.publicId // Capture Public ID
+                    };
                     
                     if (cloneId) {
                         // If cloning, reset specific fields to make it a "new" entry
@@ -96,6 +101,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
                                 loadedData.quotationNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/${nextNum}`;
                                 loadedData.date = new Date().toISOString().split('T')[0];
                                 loadedData.validTill = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                delete loadedData.publicId; // Clone shouldn't have old publicId
                                 setData(loadedData);
                             })
                             .catch(err => {
@@ -104,6 +110,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
                                 loadedData.quotationNo = `CSS/${new Date().toLocaleString('en-US', { month: 'short' }).toUpperCase()}/${new Date().getFullYear()}/261`;
                                 loadedData.date = new Date().toISOString().split('T')[0];
                                 loadedData.validTill = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                delete loadedData.publicId;
                                 setData(loadedData);
                             });
                     } else {
@@ -242,10 +249,21 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
     }
   };
 
-  const handleShare = () => {
-      const subject = encodeURIComponent(`Quotation: ${data.subject}`);
-      const body = encodeURIComponent(`Dear ${data.receiver.name || 'Client'},\n\nPlease find the quotation details below.\n\nQuotation No: ${data.quotationNo}\nTotal Amount: ₹${Math.round( data.items.reduce((acc, item) => acc + (item.qty * item.price) * (1 + item.gst/100), 0) ).toLocaleString('en-IN')}\n\nBest Regards,\n${data.sender.name}`);
-      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  const handleShare = async () => {
+      if (!data.publicId) {
+          alert('Please save the quotation first to generate a shareable link.');
+          return;
+      }
+      
+      const shareUrl = `https://css-quotation.vercel.app/share/${data.publicId}`;
+      
+      try {
+          await navigator.clipboard.writeText(shareUrl);
+          alert('Link copied to clipboard!\n' + shareUrl);
+      } catch (err) {
+          console.error('Failed to copy: ', err);
+          alert('Failed to copy link. You can manually copy this:\n' + shareUrl);
+      }
   };
 
   const [sidebarWidth, setSidebarWidth] = useState(600); 

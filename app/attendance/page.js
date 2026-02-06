@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, MapPin, RefreshCw, Calendar, Search, Trash2, FileDown } from 'lucide-react';
+import { Menu, MapPin, RefreshCw, Calendar, Search, Trash2, FileDown, FileText } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -23,17 +23,39 @@ export default function AttendancePage() {
   const [reportEndDate, setReportEndDate] = useState('');
   const [reportEmployeeName, setReportEmployeeName] = useState('');
 
+  // Remarks State
+  const [remarks, setRemarks] = useState({});
+  const [editingRemark, setEditingRemark] = useState(null); // { employeeId, date, currentRemark }
+  const [newRemarkText, setNewRemarkText] = useState('');
+
   // Load Data
   useEffect(() => {
     const loadData = async () => {
       try {
-        const response = await fetch('/api/punch');
-        if (response.ok) {
-          const data = await response.json();
+        const [punchRes, remarkRes] = await Promise.all([
+          fetch('/api/punch'),
+          fetch('/api/attendance/remarks')
+        ]);
+
+        if (punchRes.ok) {
+          const data = await punchRes.json();
           setAttendanceData(data);
         }
+        
+        if (remarkRes.ok) {
+           const rData = await remarkRes.json();
+           // Map remarks by "employeeId-dateString"
+           const rMap = {};
+           if (Array.isArray(rData)) {
+               rData.forEach(r => {
+                   rMap[`${r.employeeId}-${r.date}`] = r.remark;
+               });
+           }
+           setRemarks(rMap);
+        }
+
       } catch (error) {
-        console.error("Failed to load attendance", error);
+        console.error("Failed to load data", error);
       }
     };
     loadData();
@@ -105,7 +127,9 @@ export default function AttendancePage() {
         endTime: lastOutPunch ? new Date(lastOutPunch.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
         hours,
         status,
-        mapLink: group.locations.length > 0 ? `https://www.google.com/maps?q=${group.locations[0].lat},${group.locations[0].lng}` : '#'
+        status,
+        mapLink: group.locations.length > 0 ? `https://www.google.com/maps?q=${group.locations[0].lat},${group.locations[0].lng}` : '#',
+        remark: remarks[group.id] || ''
       };
     });
 
@@ -113,7 +137,7 @@ export default function AttendancePage() {
     rows.sort((a, b) => b.rawDate - a.rawDate);
 
     setProcessedRows(rows);
-  }, [attendanceData]);
+  }, [attendanceData, remarks]);
 
   // Filtering
   const filteredRows = processedRows.filter(row => {
@@ -203,16 +227,17 @@ export default function AttendancePage() {
           doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, reportEmployeeName ? 38 : 33);
           
 
-          // Columns - Removed Area
-          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In Time", "Out Time", "Duration"];
+          // Columns - Added Remarks
+          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In", "Out", "Duration", "Remark"];
           const tableRows = previewData.map(row => [
               row.date,
               row.employeeId,
               row.clientName,
-              `${row.areaName ? `[${row.areaName}] ` : ''}${row.workDetails}`, // Merged Area into Details
+              `${row.areaName ? `[${row.areaName}] ` : ''}${row.workDetails}`,
               row.startTime,
               row.endTime,
-              row.hours
+              row.hours,
+              row.remark || ''
           ]);
 
           autoTable(doc, {
@@ -229,6 +254,8 @@ export default function AttendancePage() {
                   4: { cellWidth: 15 }, // In
                   5: { cellWidth: 15 }, // Out
                   6: { cellWidth: 20 }, // Duration
+                  6: { cellWidth: 20 }, // Duration
+                  7: { cellWidth: 'auto' }, // Remark
               },
           });
 
@@ -241,6 +268,36 @@ export default function AttendancePage() {
       }
   };
 
+
+  const handleSaveRemark = async () => {
+      if (!editingRemark) return;
+      try {
+          const res = await fetch('/api/attendance/remarks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  employeeId: editingRemark.employeeId,
+                  date: editingRemark.date,
+                  remark: newRemarkText
+              })
+          });
+
+          if (res.ok) {
+              const savedRemark = await res.json();
+              setRemarks(prev => ({
+                  ...prev,
+                  [editingRemark.id]: savedRemark.remark
+              }));
+              setEditingRemark(null);
+              setNewRemarkText('');
+          } else {
+              alert('Failed to save remark');
+          }
+      } catch (e) {
+          console.error(e);
+          alert('Error saving remark');
+      }
+  };
 
   const handleDelete = async (row) => {
       if (!confirm(`Are you sure you want to delete attendance for ${row.employeeId} on ${row.date}?`)) return;
@@ -393,6 +450,7 @@ export default function AttendancePage() {
                     <th className="px-6 py-4">In Time</th>
                     <th className="px-6 py-4">Out Time</th>
                     <th className="px-6 py-4">Duration</th>
+                    <th className="px-6 py-4">Remark</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -420,6 +478,9 @@ export default function AttendancePage() {
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.startTime}</td>
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.endTime}</td>
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.hours}</td>
+                        <td className="px-6 py-4 text-slate-500 text-xs italic max-w-[150px] truncate" title={row.remark}>
+                            {row.remark}
+                        </td>
                         <td className="px-6 py-4 text-right flex justify-end gap-2">
                           <a 
                             href={row.mapLink} 
@@ -430,6 +491,21 @@ export default function AttendancePage() {
                           >
                             <MapPin className="w-4 h-4" />
                           </a>
+                          
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => {
+                                    setEditingRemark({ id: row.id, employeeId: row.employeeId, date: row.date });
+                                    setNewRemarkText(row.remark || '');
+                                }}
+                                className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-colors"
+                                title="Add/Edit Remark"
+                              >
+                                  <FileText className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                           
                           {isAdmin && (
                               <button 
@@ -486,6 +562,7 @@ export default function AttendancePage() {
                                 <th className="px-4 py-2">Work Details</th>
                                 <th className="px-4 py-2">Time</th>
                                 <th className="px-4 py-2">Duration</th>
+                                <th className="px-4 py-2">Remark</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -502,6 +579,9 @@ export default function AttendancePage() {
                                     </td>
                                     <td className="px-4 py-2 text-slate-600 font-mono text-xs">
                                         {row.hours}
+                                    </td>
+                                    <td className="px-4 py-2 text-slate-600 text-xs italic">
+                                        {row.remark}
                                     </td>
                                 </tr>
                             ))}
@@ -526,6 +606,40 @@ export default function AttendancePage() {
                 </div>
             </div>
         </div>
+      )}
+
+      {/* Remark Modal */}
+      {editingRemark && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Add Remark</h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                      Adding remark for <strong>{editingRemark.employeeId}</strong> on {editingRemark.date}
+                  </p>
+                  
+                  <textarea
+                      className="w-full h-32 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none mb-4 text-slate-700"
+                      placeholder="Enter remark here..."
+                      value={newRemarkText}
+                      onChange={(e) => setNewRemarkText(e.target.value)}
+                  ></textarea>
+                  
+                  <div className="flex justify-end gap-3">
+                      <button 
+                          onClick={() => setEditingRemark(null)}
+                          className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg font-medium"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={handleSaveRemark}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md shadow-blue-200"
+                      >
+                          Save Remark
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
 
     </div>

@@ -1,8 +1,10 @@
 
-import { pgTable, serial, text, timestamp, jsonb, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, jsonb, integer, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const quotations = pgTable('quotations', {
   id: serial('id').primaryKey(),
+  publicId: uuid('public_id').default(sql`gen_random_uuid()`).notNull(),
   quotationNo: text('quotation_no').notNull(),
   date: timestamp('date').defaultNow().notNull(),
   clientName: text('client_name'),
@@ -14,6 +16,7 @@ export const quotations = pgTable('quotations', {
 
 export const proformas = pgTable('proformas', {
   id: serial('id').primaryKey(),
+  publicId: uuid('public_id').default(sql`gen_random_uuid()`).notNull(),
   quotationNo: text('quotation_no').notNull(), // Can keep same column name or change to proforma_no, keeping same for simplicity/compatibility
   date: timestamp('date').defaultNow().notNull(),
   clientName: text('client_name'),
@@ -104,6 +107,7 @@ export const employees = pgTable('employees', {
 
 export const estimates = pgTable('estimates', {
   id: serial('id').primaryKey(),
+  publicId: uuid('public_id').default(sql`gen_random_uuid()`).notNull(),
   billNo: text('bill_no').notNull(),
   billDate: timestamp('bill_date').defaultNow().notNull(),
   clientName: text('client_name'),
@@ -113,3 +117,12 @@ export const estimates = pgTable('estimates', {
   data: jsonb('data').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const attendanceRemarks = pgTable('attendance_remarks', {
+  id: serial('id').primaryKey(),
+  employeeId: text('employee_id').notNull(),
+  date: text('date').notNull(), // text to match locale date string used in grouping
+  remark: text('remark').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+

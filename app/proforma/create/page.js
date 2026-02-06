@@ -68,7 +68,12 @@ Damage And Repair Not Cover In Warranty`
             })
             .then(quotation => {
                 if (quotation.data) {
-                    setData({ ...quotation.data, type: 'Proforma', fixedType: true });
+                    setData({ 
+                        ...quotation.data, 
+                        type: 'Proforma', 
+                        fixedType: true,
+                        publicId: quotation.publicId 
+                    });
                 }
             })
             .catch(err => console.error(err))
@@ -163,10 +168,21 @@ Damage And Repair Not Cover In Warranty`
     }
   };
 
-  const handleShare = () => {
-      const subject = encodeURIComponent(`Proforma Invoice: ${data.subject}`);
-      const body = encodeURIComponent(`Dear ${data.receiver.name || 'Client'},\n\nPlease find the proforma invoice details below.\n\nPI No: ${data.quotationNo}\nTotal Amount: ₹${Math.round( data.items.reduce((acc, item) => acc + (item.qty * item.price) * (1 + item.gst/100), 0) ).toLocaleString('en-IN')}\n\nBest Regards,\n${data.sender.name}`);
-      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  const handleShare = async () => {
+      if (!data.publicId) {
+          alert('Please save the proforma invoice first to generate a shareable link.');
+          return;
+      }
+      
+      const shareUrl = `https://css-quotation.vercel.app/share/${data.publicId}`;
+      
+      try {
+          await navigator.clipboard.writeText(shareUrl);
+          alert('Link copied to clipboard!\n' + shareUrl);
+      } catch (err) {
+          console.error('Failed to copy: ', err);
+          alert('Failed to copy link. You can manually copy this:\n' + shareUrl);
+      }
   };
 
   const [sidebarWidth, setSidebarWidth] = useState(600); 

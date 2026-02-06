@@ -100,7 +100,7 @@ export default function PublicSharePage({ params }) {
 
        {/* Scaled Preview Container */}
        <div 
-          className="shadow-2xl bg-white origin-top transition-transform duration-200"
+          className="shadow-2xl bg-white origin-top transition-transform duration-200 print-container"
           style={{ 
               transform: `scale(${scale})`,
               marginBottom: `-${(1 - scale) * 1123}px` // Compensate for vertical space lost by scaling (approx A4 height)
@@ -123,6 +123,12 @@ export default function PublicSharePage({ params }) {
           @media print {
             .no-print { display: none !important; }
             body { background: white; }
+            /* Reset scaling for print */
+            .print-container {
+                transform: none !important;
+                margin-bottom: 0 !important;
+                box-shadow: none !important;
+            }
           }
        `}</style>
     </div>

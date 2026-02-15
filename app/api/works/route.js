@@ -15,7 +15,7 @@ export async function POST(request) {
 
     const client = await clerkClient();
     const currentUser = await client.users.getUser(userId);
-    const isAdmin = currentUser.publicMetadata?.role === 'admin';
+    const isAdmin = currentUser.publicMetadata?.role === 'admin' || currentUser.publicMetadata?.role === 'super-admin';
     
     // Only admin can assign works
     if (!isAdmin) {
@@ -64,7 +64,7 @@ export async function GET() {
 
     const client = await clerkClient();
     const currentUser = await client.users.getUser(userId);
-    const isAdmin = currentUser.publicMetadata?.role === 'admin';
+    const isAdmin = currentUser.publicMetadata?.role === 'admin' || currentUser.publicMetadata?.role === 'super-admin';
 
     let data;
     if (isAdmin) {

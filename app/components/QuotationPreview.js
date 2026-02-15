@@ -11,6 +11,7 @@ const QuotationPreview = ({ data }) => {
     receiver: data?.receiver || {},
     items: data?.items || [],
     terms: data?.terms || '',
+    showMake: data?.showMake !== false, // Default true
   };
 
   const isProforma = (safeData.type || '').toLowerCase().includes('proforma');
@@ -253,7 +254,7 @@ const QuotationPreview = ({ data }) => {
                             <th className="w-20 py-2 border-r border-slate-300 text-right px-2 font-bold">Rate</th>
                             <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">GST %</th>
                             <th className="w-24 py-2 border-r border-slate-300 text-right px-2 font-bold">Total</th>
-                            <th className="w-20 py-2 text-center font-bold">Make</th>
+                            {safeData.showMake && <th className="w-20 py-2 text-center font-bold">Make</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -280,7 +281,7 @@ const QuotationPreview = ({ data }) => {
                                     <td className="w-24 py-2 border-r border-slate-200 text-right font-bold text-slate-900 px-2 align-top">
                                         {item.qty === '' ? '' : calculateRowTotal(item.qty, item.price, item.gst).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                     </td>
-                                    <td className="w-20 py-2 text-center text-slate-600 font-semibold align-top">{item.make}</td>
+                                    {safeData.showMake && <td className="w-20 py-2 text-center text-slate-600 font-semibold align-top">{item.make}</td>}
                                 </tr>
                         ))}
                         <tr className="h-full">
@@ -293,7 +294,8 @@ const QuotationPreview = ({ data }) => {
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>
                             <td className="border-r border-slate-200"></td>
-                            <td></td>
+                            <td className="border-r border-slate-200"></td>
+                            {safeData.showMake && <td></td>}
                         </tr>
                     </tbody>
                 </table>

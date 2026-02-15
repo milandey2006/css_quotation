@@ -22,7 +22,7 @@ export async function POST(request) {
 
     const client = await clerkClient();
     const currentUser = await client.users.getUser(userId);
-    const isAdmin = currentUser.publicMetadata?.role === 'admin';
+    const isAdmin = currentUser.publicMetadata?.role === 'admin' || currentUser.publicMetadata?.role === 'super-admin';
 
     if (!isAdmin) {
          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

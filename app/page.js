@@ -41,8 +41,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (isLoaded) {
         const role = user?.publicMetadata?.role;
-        // If user is NOT admin, redirect to works
-        if (role !== 'admin') {
+        // If user is NOT admin or super-admin, redirect to works
+        if (role !== 'admin' && role !== 'super-admin') {
             router.push('/works');
         } else {
             fetchDocuments(); // Only fetch if admin

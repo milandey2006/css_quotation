@@ -300,6 +300,15 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
                  />
                  <label htmlFor="showImages" className="text-sm">Show Item Images</label>
             </div>
+            <div className="flex items-center gap-2">
+                 <input 
+                     type="checkbox" 
+                     checked={data.showMake !== false} // Default to true if undefined, or false if explicitly false. Actually, user asked for "add and hide", implying default might be visible or hidden. Let's assume visible by default to match current behavior, or check requirement. Current behavior shows it. So default true.
+                     onChange={(e) => onChange('meta', 'showMake', e.target.checked)}
+                     id="showMake"
+                 />
+                 <label htmlFor="showMake" className="text-sm">Show Make Column</label>
+            </div>
 
       </div>
 

@@ -16,7 +16,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (isLoaded) {
-       if (user?.publicMetadata?.role !== 'admin') {
+       if (user?.publicMetadata?.role !== 'super-admin') {
            router.push('/works');
            return;
        }
@@ -177,6 +177,7 @@ export default function SettingsPage() {
                                         >
                                             <option value="user">User</option>
                                             <option value="admin">Admin</option>
+                                            <option value="super-admin">Super Admin</option>
                                         </select>
                                     </td>
                                     <td className="px-6 py-4 text-right">

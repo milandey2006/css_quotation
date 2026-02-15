@@ -36,7 +36,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     if (isLoaded) {
         const role = user?.publicMetadata?.role;
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'super-admin') {
             router.push('/');
         } else {
             fetchEmployees();

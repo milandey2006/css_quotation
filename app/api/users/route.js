@@ -18,7 +18,7 @@ export async function GET() {
     
     console.log('API: Validating Admin. Fetched Role:', role);
 
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super-admin') {
       return NextResponse.json({ error: 'Unauthorized. Admin role required.' }, { status: 403 });
     }
 

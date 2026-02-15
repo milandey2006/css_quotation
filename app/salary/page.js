@@ -24,7 +24,7 @@ export default function SalarySlipsPage() {
   useEffect(() => {
     if (isLoaded) {
         const role = user?.publicMetadata?.role;
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'super-admin') {
             router.push('/'); // Redirect non-admins
         } else {
             fetchSlips();

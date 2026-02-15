@@ -11,10 +11,10 @@ export async function PATCH(request, { params }) {
 
     const client = await clerkClient();
     
-    // Check if requester is admin
+    // Check if requester is super-admin
     const requester = await client.users.getUser(userId);
-    if (requester.publicMetadata?.role !== 'admin') {
-         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (requester.publicMetadata?.role !== 'super-admin') {
+         return NextResponse.json({ error: 'Forbidden. Super Admin required.' }, { status: 403 });
     }
 
     const { id } = await params;
@@ -47,10 +47,10 @@ export async function DELETE(request, { params }) {
 
     const client = await clerkClient();
     
-    // Check if requester is admin
+    // Check if requester is super-admin
     const requester = await client.users.getUser(userId);
-    if (requester.publicMetadata?.role !== 'admin') {
-         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (requester.publicMetadata?.role !== 'super-admin') {
+         return NextResponse.json({ error: 'Forbidden. Super Admin required.' }, { status: 403 });
     }
 
     const { id } = await params;

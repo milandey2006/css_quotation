@@ -231,7 +231,7 @@ export default function WorksPage() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const { user } = useUser();
-  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const isAdmin = user?.publicMetadata?.role === 'admin' || user?.publicMetadata?.role === 'super-admin';
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans">

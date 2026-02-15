@@ -4,12 +4,22 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { Menu, MapPin, RefreshCw, Calendar, Search, Trash2, FileDown, FileText } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function AttendancePage() {
-  const { user } = useUser();
-  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const { user, isLoaded } = useUser();
+  const router = useRouter(); // Need to import useRouter
+  const isSuperAdmin = user?.publicMetadata?.role === 'super-admin';
+
+  useEffect(() => {
+    if (isLoaded) {
+        if (user?.publicMetadata?.role !== 'super-admin') {
+            router.push('/');
+        }
+    }
+  }, [isLoaded, user, router]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -492,7 +502,7 @@ export default function AttendancePage() {
                             <MapPin className="w-4 h-4" />
                           </a>
                           
-                          {isAdmin && (
+                          {isSuperAdmin && (
                             <>
                               <button
                                 onClick={() => {
@@ -507,7 +517,7 @@ export default function AttendancePage() {
                             </>
                           )}
                           
-                          {isAdmin && (
+                          {isSuperAdmin && (
                               <button 
                                 onClick={() => handleDelete(row)}
                                 className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"

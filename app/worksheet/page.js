@@ -8,10 +8,8 @@ import Sidebar from '../components/Sidebar';
 
 const WorksheetPage = () => {
     // Initial data structure
-    const [rows, setRows] = useState([
-        { id: 1, date: '', work: '', person: '', client: '', startTime: '', endTime: '', location: '', products: '', report: '', status: '', payment: '', remark: '' }
-    ]);
-    const [nextId, setNextId] = useState(2);
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     
@@ -35,37 +33,24 @@ const WorksheetPage = () => {
         { key: 'remark', label: 'REMARK', type: 'text', width: 'min-w-[150px]' },
     ];
 
-    // Load from local storage on mount
+    // Load from API on mount
     useEffect(() => {
-        const savedData = localStorage.getItem('worksheetData');
-        if (savedData) {
-            try {
-                const parsed = JSON.parse(savedData);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    // Migration logic
-                    const migrated = parsed.map(row => {
-                         let newRow = { ...row };
-                         if (row.time && !row.startTime) {
-                             newRow.startTime = row.time;
-                             newRow.endTime = '';
-                         }
-                         if (row.sn !== undefined) delete newRow.sn; 
-                         // Merge clientNumber if exists
-                         if (newRow.clientNumber) {
-                             newRow.client = newRow.client ? `${newRow.client}\n${newRow.clientNumber}` : newRow.clientNumber;
-                             delete newRow.clientNumber;
-                         }
-                         return newRow;
-                    });
-                    setRows(migrated);
-                    const maxId = Math.max(...migrated.map(r => r.id));
-                    setNextId(maxId + 1);
-                }
-            } catch (e) {
-                console.error("Failed to load saved data", e);
-            }
-        }
+        fetchWorksheets();
     }, []);
+
+    const fetchWorksheets = async () => {
+        try {
+            const res = await fetch('/api/worksheets');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setRows(data);
+            }
+        } catch (error) {
+            console.error("Failed to load worksheets:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Filter Logic
     const filteredRows = rows.filter(row => {
@@ -81,29 +66,85 @@ const WorksheetPage = () => {
         return matchesSearch && matchesDate;
     });
 
-    const handleChange = (id, field, value) => {
+    const handleChange = async (id, field, value) => {
+        // Optimistic update
+        const oldRows = [...rows];
         setRows(prev => prev.map(row => 
             row.id === id ? { ...row, [field]: value } : row
         ));
+
+        // Debounce or just save on blur would be better, but for now specific save button is used, 
+        // however the user asked for "updates automatically". 
+        // Let's implement auto-save for status or critical fields, or keep the save button for bulk.
+        // Actually the prompt said "when the employee punch out the worksheet should get updated automatically", which is handled in works/page.js
+        // For this admin grid, we can keep the save button or auto-save.
+        // Let's implement individual field update if needed, but for now we'll stick to the "Save Grid" button logic modified to generic "Save Row" or keep "Save Grid" as bulk update?
+        // Bulk update might be heavy. Let's do row-level update on Save, or keep local state and batch save.
+        // To be safe and simple, let's keep local state updating, and "Save Grid" will push changes.
+        // BUT, since we have a database now, it's better to update per row or have a clear save action.
+        // The original code had a "Save Grid" button. Let's make that button save ALL modified rows or just all rows.
     };
 
-    const addRow = () => {
-        setRows(prev => [
-            ...prev,
-            { id: nextId, date: '', work: '', person: '', client: '', startTime: '', endTime: '', location: '', products: '', report: '', status: '', payment: '', remark: '' }
-        ]);
-        setNextId(prev => prev + 1);
-    };
-
-    const deleteRow = (id) => {
-        if (confirm('Are you sure you want to delete this row?')) {
-            setRows(prev => prev.filter(row => row.id !== id));
+    const addRow = async () => {
+        try {
+            const res = await fetch('/api/worksheets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: new Date().toISOString().split('T')[0],
+                    work: '', person: '', client: '', startTime: '', endTime: '', location: '', products: '', report: '', status: 'Pending', payment: '', remark: ''
+                })
+            });
+            const newRow = await res.json();
+            setRows(prev => [newRow, ...prev]);
+        } catch (error) {
+            console.error("Failed to add row:", error);
+            alert("Failed to add new row");
         }
     };
 
-    const saveData = () => {
-        localStorage.setItem('worksheetData', JSON.stringify(rows));
-        alert('Worksheet saved successfully!');
+    const deleteRow = async (id) => {
+        if (confirm('Are you sure you want to delete this row?')) {
+            // Optimistic
+            setRows(prev => prev.filter(row => row.id !== id));
+            try {
+                await fetch(`/api/worksheets?id=${id}`, { method: 'DELETE' });
+            } catch (error) {
+                console.error("Failed to delete:", error);
+                alert("Failed to delete row");
+                fetchWorksheets(); // Revert
+            }
+        }
+    };
+
+    const saveData = async () => {
+        // We'll treat this as "Save All Changes" - might be inefficient but simple for migration
+        // Or better, we only save changed rows? Tracking changes is complex.
+        // Let's just loop and update all? No, that's too many requests.
+        // Let's just create a BULK UPDATE endpoint vs loop.
+        // For now, let's just make it clear: "Changes are saved locally until you click Save?". No, with DB it should be more instant or explicit.
+        // Let's make "Save Grid" update each row that changed?
+        // Simplest strategy for now: Loop through rows and PUT.
+        
+        // BETTER: The user might expect auto-save now that we are online.
+        // BUT, to avoid regression, let's make the "Save Grid" button work by iterating.
+        
+        let success = true;
+        for(let row of rows) {
+             try {
+                 await fetch('/api/worksheets', {
+                     method: 'PUT',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(row)
+                 });
+             } catch(e) {
+                 console.error(e);
+                 success = false;
+             }
+        }
+        
+        if(success) alert('Worksheet saved successfully!');
+        else alert('Some rows failed to save.');
     };
 
     // PDF Export

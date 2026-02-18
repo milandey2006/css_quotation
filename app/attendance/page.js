@@ -317,9 +317,15 @@ export default function AttendancePage() {
           // Identify IDs to delete
           const punchIds = row.punches.map(p => p.id);
           
-          await Promise.all(punchIds.map(id => 
+          const results = await Promise.all(punchIds.map(id => 
               fetch(`/api/punch/${id}`, { method: 'DELETE' })
           ));
+
+          const allSuccess = results.every(res => res.ok);
+
+          if (!allSuccess) {
+              throw new Error("One or more punches failed to delete.");
+          }
 
           // Refresh locally
           setAttendanceData(prev => prev.filter(p => !punchIds.includes(p.id)));

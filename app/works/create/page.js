@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import { Menu, Save, Briefcase, MapPin, Phone, User, Mic, MicOff } from 'lucide-react';
 
@@ -9,11 +9,14 @@ export default function CreateWorkPage() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  const searchParams = useSearchParams();
+
   const [formData, setFormData] = useState({
-    clientName: '',
-    clientPhone: '',
-    clientAddress: '',
-    instructions: '',
+    clientName: searchParams.get('clientName') || '',
+    clientPhone: searchParams.get('clientPhone') || '',
+    clientAddress: searchParams.get('clientAddress') || '',
+    instructions: searchParams.get('instructions') || '',
   });
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [isListening, setIsListening] = useState(null); // 'address', 'instructions', or null

@@ -11,9 +11,10 @@ export async function DELETE(request, { params }) {
 
     const client = await clerkClient();
     const requester = await client.users.getUser(userId);
-    const isAdmin = requester.publicMetadata?.role === 'admin';
+    const role = requester.publicMetadata?.role;
+    const isAuthorized = role === 'admin' || role === 'super-admin';
 
-    if (!isAdmin) {
+    if (!isAuthorized) {
          return NextResponse.json({ error: 'Forbidden. Only admins can delete attendance.' }, { status: 403 });
     }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, MapPin, Phone, Briefcase, Navigation, Clock, CheckCircle, Edit, X } from 'lucide-react';
+import { Menu, MapPin, Phone, Briefcase, Navigation, Clock, CheckCircle, Edit, X, Copy } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 
 export default function WorksPage() {
@@ -69,7 +69,7 @@ export default function WorksPage() {
       }
   };
 
-  const handlePunch = async (work, type) => {
+    const handlePunch = async (work, type) => {
       if (!navigator.geolocation) {
           alert('Geolocation is not supported by your browser.');
           return;
@@ -82,15 +82,8 @@ export default function WorksPage() {
           const { latitude, longitude } = position.coords;
           
           try {
-             // Get user info (employeeId)
-             // We can assume the logged-in user is the employee.
-             // The API routes for punch should handle getting the user ID/name if not sent, 
-             // but app/punch/page.js sends employeeId. 
-             // Let's grab the current user's name from clerk hook if possible, or just send a placeholder key that the API resolves?
-             // app/punch/page.js sends: employeeId, clientName, areaName, workDetails, type, location.
-             
-             // We'll use the user's name/id from the hook.
              const employeeId = user?.fullName || user?.firstName || 'Unknown User';
+             const currentLocation = { lat: latitude, lng: longitude };
 
               const payload = {
                   employeeId,
@@ -98,9 +91,10 @@ export default function WorksPage() {
                   areaName: work.clientAddress || 'Work Site',
                   workDetails: `Punch ${type} from Worklist for ${work.clientName}`,
                   type, 
-                  location: { lat: latitude, lng: longitude }
+                  location: currentLocation
               };
 
+              // 1. Save Punch to Attendance
               const response = await fetch('/api/punch', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -108,6 +102,34 @@ export default function WorksPage() {
               });
 
               if (!response.ok) throw new Error('Failed to punch');
+
+              // 2. If Punch OUT, create worksheet entry and mark work as completed
+              if (type === 'out') {
+                  // Create Worksheet Entry
+                  const worksheetPayload = {
+                      date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                      work: work.instructions || `Work for ${work.clientName}`,
+                      person: employeeId,
+                      client: `${work.clientName}\n${work.clientPhone || ''}`,
+                      startTime: '', // Could potentially track start time if we had punch in data stored
+                      endTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      location: work.clientAddress || `${latitude}, ${longitude}`,
+                      products: '',
+                      report: 'Completed via App Punch Out',
+                      status: 'Completed',
+                      payment: '',
+                      remark: ''
+                  };
+
+                  await fetch('/api/worksheets', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(worksheetPayload)
+                  });
+
+                  // Mark Work as Completed (Removed from list view)
+                  await updateStatus(work.id, 'completed');
+              }
 
               alert(`Successfully Punched ${type === 'in' ? 'IN' : 'OUT'}`);
               setPunchStatus(prev => ({ ...prev, [work.id]: type }));
@@ -124,6 +146,16 @@ export default function WorksPage() {
           setPunchLoading(prev => ({ ...prev, [work.id]: false }));
         }
       );
+  };
+
+  const handleCopyWork = (work) => {
+    const params = new URLSearchParams({
+        clientName: work.clientName || '',
+        clientPhone: work.clientPhone || '',
+        clientAddress: work.clientAddress || '',
+        instructions: work.instructions || ''
+    });
+    window.location.href = `/works/create?${params.toString()}`;
   };
 
   const updateStatus = async (id, newStatus) => {
@@ -303,6 +335,13 @@ export default function WorksPage() {
                                 {/* Admin Actions */}
                                 {isAdmin && (
                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                                        <button 
+                                            onClick={() => handleCopyWork(work)}
+                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all bg-white shadow-sm"
+                                            title="Copy Work"
+                                        >
+                                            <Copy className="w-3.5 h-3.5" />
+                                        </button>
                                         <button 
                                             onClick={() => handleEditClick(work)}
                                             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all bg-white shadow-sm"

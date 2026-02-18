@@ -126,3 +126,20 @@ export const attendanceRemarks = pgTable('attendance_remarks', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+
+export const worksheets = pgTable('worksheets', {
+  id: serial('id').primaryKey(),
+  date: text('date'), // Storing as text for simplicity with date inputs
+  work: text('work'),
+  person: text('person'),
+  client: text('client'),
+  startTime: text('start_time'),
+  endTime: text('end_time'),
+  location: text('location'),
+  products: text('products'),
+  report: text('report'),
+  status: text('status'),
+  payment: text('payment'),
+  remark: text('remark'),
+  createdAt: timestamp('created_at').defaultNow(),
+});

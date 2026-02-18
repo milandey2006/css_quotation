@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import { Menu, Save, Briefcase, MapPin, Phone, User, Mic, MicOff } from 'lucide-react';
 
-export default function CreateWorkPage() {
+function CreateWorkContent() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -154,7 +154,6 @@ export default function CreateWorkPage() {
                 <div className="p-6 space-y-6">
                     
 
-
                     {/* Client Name */}
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Client Name</label>
@@ -253,4 +252,16 @@ export default function CreateWorkPage() {
       </main>
     </div>
   );
+}
+
+export default function CreateWorkPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen items-center justify-center bg-slate-50">
+                <p className="text-slate-500">Loading...</p>
+            </div>
+        }>
+            <CreateWorkContent />
+        </Suspense>
+    );
 }

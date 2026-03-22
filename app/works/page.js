@@ -105,13 +105,31 @@ export default function WorksPage() {
 
               // 2. If Punch OUT, create worksheet entry and mark work as completed
               if (type === 'out') {
+                  
+                  // Fetch the 'in' time to populate startTime
+                  let fetchedStartTime = '';
+                  try {
+                      // Fetch the last IN punch for this employee and client
+                      const res = await fetch(`/api/punch/last-in?employeeId=${encodeURIComponent(employeeId)}&clientName=${encodeURIComponent(work.clientName)}`);
+                      if (res.ok) {
+                          const data = await res.json();
+                          if (data.timestamp) {
+                              const punchDate = new Date(data.timestamp);
+                              // Format as HH:MM AM/PM
+                              fetchedStartTime = punchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          }
+                      }
+                  } catch (err) {
+                      console.error('Failed to fetch IN time:', err);
+                  }
+
                   // Create Worksheet Entry
                   const worksheetPayload = {
                       date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
                       work: work.instructions || `Work for ${work.clientName}`,
                       person: employeeId,
                       client: `${work.clientName}\n${work.clientPhone || ''}`,
-                      startTime: '', // Could potentially track start time if we had punch in data stored
+                      startTime: fetchedStartTime, // Populated from punch in
                       endTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                       location: work.clientAddress || `${latitude}, ${longitude}`,
                       products: '',

@@ -262,7 +262,10 @@ const QuotationPreview = ({ data }) => {
                                 <tr key={index} className="border-b border-slate-200 ">
                                     <td className="w-10 py-2 border-r border-slate-200 text-center font-bold text-slate-700">{item._sr}</td>
                                     <td className="px-3 py-2 border-r border-slate-200 text-slate-800 text-left align-top">
-                                        <div className="whitespace-pre-wrap">{item.description}</div>
+                                        <div 
+                                            className="quotation-rich-text whitespace-pre-wrap" 
+                                            dangerouslySetInnerHTML={{ __html: item.description }} 
+                                        />
                                     </td>
                                     {safeData.showImages && safeData.type !== 'Proforma' && (
                                         <td className="w-20 border-r border-slate-200 p-1 align-middle">

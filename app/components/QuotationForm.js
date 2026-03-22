@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import RichTextEditor from './RichTextEditor';
 import {
   DndContext, 
   closestCenter,
@@ -357,11 +358,9 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
 
                           {/* Item Fields */}
                           <div className="space-y-3">
-                            <input
-                              placeholder="Description"
+                            <RichTextEditor
                               value={item.description}
-                              onChange={(e) => onItemChange(index, 'description', e.target.value)}
-                              className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                              onChange={(value) => onItemChange(index, 'description', value)}
                             />
                              <input
                               placeholder="Image URL"

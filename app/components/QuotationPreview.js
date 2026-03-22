@@ -40,15 +40,22 @@ const QuotationPreview = ({ data }) => {
   const PROFORMA_FOOTER_WEIGHT = 10; // Approx weight for Totals + 5 lines of T&C
 
   const getItemWeight = (description = '') => {
-    const desc = description || '';
-    const rawLines = desc.split('\n').length;
-    const wrappingLines = Math.ceil(desc.length / MAX_CHARS_PER_LINE);
+    let desc = description || '';
+    // Convert block elements to newlines for accurate line counting
+    desc = desc.replace(/<\/?(p|div|li|br)[^>]*>/gi, '\n');
+    // Strip all remaining HTML tags
+    desc = desc.replace(/<[^>]*>?/gm, '');
+    desc = desc.replace(/&nbsp;/ig, ' ');
+    desc = desc.replace(/\n+/g, '\n').trim();
+
+    const rawLines = desc ? desc.split('\n').length : 0;
+    const wrappingLines = Math.ceil((desc.length || 0) / MAX_CHARS_PER_LINE);
     
     // We take the larger of the two estimates
     const totalLines = Math.max(rawLines, wrappingLines);
     
     // Balanced multiplier to prevent overflow
-    return 1 + ((totalLines - 1) * 0.75); 
+    return 1 + (Math.max(0, totalLines - 1) * 0.75); 
   };
 
   const pages = [];
@@ -69,11 +76,14 @@ const QuotationPreview = ({ data }) => {
           currentUsage += weight;
       } else {
           // --- SPLITTING LOGIC ---
-          if (remainingSpace > 2.5) { // Needs at least 2.5 units of space to attempt a split
+          const description = item.description || '';
+          const hasHtmlTags = /<[a-z][\s\S]*>/i.test(description);
+
+          // Only attempt to split if it's plaintext (no HTML tags) to prevent corrupting rich text DOM
+          if (!hasHtmlTags && remainingSpace > 2.5) { 
               const availableLines = Math.floor((remainingSpace - 1) / 0.45); 
               if (availableLines >= 1) { 
                   const approxChars = Math.floor(availableLines * MAX_CHARS_PER_LINE);
-                  const description = item.description || '';
                   
                   let cutIndex = description.lastIndexOf('\n', approxChars);
                   if (cutIndex === -1 || cutIndex < approxChars * 0.5) cutIndex = description.lastIndexOf(' ', approxChars);
@@ -100,6 +110,7 @@ const QuotationPreview = ({ data }) => {
                   continue; 
               }
           }
+          // If it contains HTML or there isn't enough space to split, just move the whole item to the next page
           pages.push(currentPage);
           currentPage = [];
           currentUsage = 0;
@@ -242,19 +253,19 @@ const QuotationPreview = ({ data }) => {
 
             {pageItems.length > 0 && (
             <div className="mb-4 w-full flex-grow flex flex-col">
-                <table className="w-full text-xs border-collapse h-full">
+                <table className="w-full text-xs border-collapse h-full table-fixed">
                     <thead>
                         <tr className="border-y border-slate-500 bg-slate-50 text-slate-900">
-                            <th className="w-10 py-2 border-r border-slate-300 text-center font-bold">Sr.n</th>
-                            <th className="px-3 py-2 border-r border-slate-300 text-left font-bold">Particulars</th>
-                            {safeData.showImages && safeData.type !== 'Proforma' && <th className="w-20 py-2 border-r border-slate-300 text-center font-bold">Image</th>}
-                            {safeData.type === 'Proforma' && <th className="w-16 py-2 border-r border-slate-300 text-center font-bold">HSN/SAC</th>}
+                            <th className="w-[5%] py-2 border-r border-slate-300 text-center font-bold">Sr.n</th>
+                            <th className="w-[45%] px-3 py-2 border-r border-slate-300 text-left font-bold">Particulars</th>
+                            {safeData.showImages && safeData.type !== 'Proforma' && <th className="w-[8%] py-2 border-r border-slate-300 text-center font-bold">Image</th>}
+                            {safeData.type === 'Proforma' && <th className="w-[8%] py-2 border-r border-slate-300 text-center font-bold">HSN/SAC</th>}
 
-                            <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">QTY</th>
-                            <th className="w-20 py-2 border-r border-slate-300 text-right px-2 font-bold">Rate</th>
-                            <th className="w-12 py-2 border-r border-slate-300 text-center font-bold">GST %</th>
-                            <th className="w-24 py-2 border-r border-slate-300 text-right px-2 font-bold">Total</th>
-                            {safeData.showMake && <th className="w-20 py-2 text-center font-bold">Make</th>}
+                            <th className="w-[6%] py-2 border-r border-slate-300 text-center font-bold">QTY</th>
+                            <th className="w-[12%] py-2 border-r border-slate-300 text-right px-2 font-bold">Rate</th>
+                            <th className="w-[6%] py-2 border-r border-slate-300 text-center font-bold">GST %</th>
+                            <th className="w-[12%] py-2 border-r border-slate-300 text-right px-2 font-bold">Total</th>
+                            {safeData.showMake && <th className="w-[6%] py-2 text-center font-bold">Make</th>}
                         </tr>
                     </thead>
                     <tbody>

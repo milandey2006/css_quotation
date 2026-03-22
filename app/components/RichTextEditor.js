@@ -38,7 +38,7 @@ const RichTextEditor = ({ value, onChange, placeholder = "Write description here
         modules={modules}
         formats={formats}
         placeholder={placeholder}
-        className="[&_.ql-editor]:min-h-[60px] [&_.ql-editor]:max-h-[300px] [&_.ql-editor]:text-gray-900 [&_.ql-editor.ql-blank::before]:text-gray-500 [&_.ql-editor.ql-blank::before]:font-normal [&_.ql-container]:border-0 [&_.ql-toolbar]:hidden group-focus-within:[&_.ql-toolbar]:block [&_.ql-toolbar]:border-t-0 [&_.ql-toolbar]:border-x-0 [&_.ql-toolbar]:border-b-gray-200 [&_.ql-toolbar]:bg-gray-50"
+        className="[&_.ql-editor]:min-h-[60px] [&_.ql-editor]:max-h-[300px] [&_.ql-editor]:text-gray-900 [&_.ql-editor]:whitespace-pre-wrap [&_.ql-editor]:break-words [&_.ql-editor.ql-blank::before]:text-gray-500 [&_.ql-editor.ql-blank::before]:font-normal [&_.ql-container]:border-0 [&_.ql-toolbar]:hidden group-focus-within:[&_.ql-toolbar]:block [&_.ql-toolbar]:border-t-0 [&_.ql-toolbar]:border-x-0 [&_.ql-toolbar]:border-b-gray-200 [&_.ql-toolbar]:bg-gray-50"
       />
     </div>
   );

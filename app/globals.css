@@ -26,8 +26,16 @@ body {
 }
 
 /* Rich Text Editor Display Styles for Quotations */
+.quotation-rich-text {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
 .quotation-rich-text p {
   margin-bottom: 0.25rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 .quotation-rich-text ul {
   list-style-type: disc;

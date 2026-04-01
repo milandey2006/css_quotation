@@ -56,7 +56,7 @@ Validity Of Quote : 10 days from date of Quote
 Our responsibility ceases the moment the good leave our premises and no claim of breakage, etc would be accepted.
 Completion of work will be in 7days
 Scope of Client :- customer will providing ladder and etc for working accessories proper power source to the equipments, Civil, Carpentry, Fabrication work is in the scope of client
-Complain will be received by Email:- <a href="mailto:info@championsecuritysystem.com" class="text-blue-600 underline">info@championsecuritysystem.com</a> with detail (like camera number, place etc).
+Complain will be received by Email:- <a href="mailto:support@championsecuritysystem.com" class="text-blue-600 underline">support@championsecuritysystem.com</a> with detail (like camera number, place etc).
 Time:- 10:30am To 6:30pm
 Service will be provided in 24 to 48 hours after call received by Authorized Person`
   });

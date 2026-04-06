@@ -22,7 +22,11 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Briefcase
+  Briefcase,
+  Clock,
+  X,
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -37,6 +41,17 @@ export default function Dashboard() {
   const router = useRouter(); // For redirect
   const [works, setWorks] = useState([]); // Pending works state
   const [pendingEstimatesCount, setPendingEstimatesCount] = useState(0);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showPendingWorksModal, setShowPendingWorksModal] = useState(false);
+  const [recentAttendance, setRecentAttendance] = useState([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+
+  useEffect(() => {
+    const role = user?.publicMetadata?.role;
+    if (isLoaded && (role === 'admin' || role === 'super-admin')) {
+        fetchDocuments();
+    }
+  }, [activeTab, isLoaded, user]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -45,8 +60,8 @@ export default function Dashboard() {
         if (role !== 'admin' && role !== 'super-admin') {
             router.push('/works');
         } else {
-            fetchDocuments(); // Only fetch if admin
             fetchWorks();
+            fetchRecentAttendance();
             
             // Fetch local estimates counts
             const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
@@ -54,7 +69,78 @@ export default function Dashboard() {
             setPendingEstimatesCount(unpaid);
         }
     }
-  }, [activeTab, isLoaded, user, router]);
+  }, [isLoaded, user, router]); // Removed activeTab to prevent loop
+
+  // Trigger modals on first load if active items exist
+  useEffect(() => {
+    if (!loading) {
+        if (quotations.length > 0 && quotations.some(q => q.status === 'Active')) {
+            setShowPendingModal(true);
+        }
+        if (works.length > 0 && works.some(w => w.status === 'pending' || w.status === 'active')) {
+            // Delay works modal slightly if both exist so they don't overlap immediately
+            const delay = quotations.some(q => q.status === 'Active') ? 1000 : 0;
+            setTimeout(() => setShowPendingWorksModal(true), delay);
+        }
+    }
+  }, [loading, quotations.length, works.length]);
+
+  const fetchRecentAttendance = async () => {
+    setLoadingAttendance(true);
+    try {
+        const res = await fetch('/api/punch');
+        const allPunches = await res.json();
+        
+        if (Array.isArray(allPunches)) {
+            // Filter for last 2 days (today and yesterday)
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+            
+            const todayStr = today.toLocaleDateString();
+            const yesterdayStr = yesterday.toLocaleDateString();
+            
+            // Group by employee and date
+            const groups = {};
+            allPunches.forEach(p => {
+                const dateStr = new Date(p.timestamp).toLocaleDateString();
+                if (dateStr === todayStr || dateStr === yesterdayStr) {
+                    const key = `${p.employeeId}-${dateStr}`;
+                    if (!groups[key]) {
+                        groups[key] = {
+                            employeeId: p.employeeId,
+                            date: dateStr,
+                            punches: [],
+                            clientName: p.clientName || '-',
+                            rawDate: new Date(p.timestamp)
+                        };
+                    }
+                    groups[key].punches.push(p);
+                }
+            });
+
+            const rows = Object.values(groups).map(g => {
+                g.punches.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+                const firstIn = g.punches.find(p => p.type === 'in');
+                const lastOut = [...g.punches].reverse().find(p => p.type === 'out');
+                
+                return {
+                    ...g,
+                    firstIn: firstIn ? new Date(firstIn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+                    lastOut: lastOut ? new Date(lastOut.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+                    status: firstIn ? (lastOut ? 'Completed' : 'Working') : 'Absent'
+                };
+            });
+
+            rows.sort((a,b) => b.rawDate - a.rawDate);
+            setRecentAttendance(rows);
+        }
+    } catch (e) {
+        console.error("Error fetching attendance:", e);
+    } finally {
+        setLoadingAttendance(false);
+    }
+  };
 
   const fetchWorks = async () => {
     try {
@@ -239,6 +325,59 @@ export default function Dashboard() {
               </Link>
           </div>
 
+          {/* Recent Attendance (2 Days) - ONLY FOR ADMIN/SUPER-ADMIN */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-indigo-500" />
+                      Recent Attendance (Last 2 Days)
+                  </h2>
+                  <button onClick={fetchRecentAttendance} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                      <RefreshCw className={`w-4 h-4 ${loadingAttendance ? 'animate-spin' : ''}`} />
+                  </button>
+              </div>
+              <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50/50 text-slate-500 text-xs uppercase font-bold">
+                          <tr>
+                              <th className="px-6 py-4">Date</th>
+                              <th className="px-6 py-4">Employee</th>
+                              <th className="px-6 py-4">Client</th>
+                              <th className="px-6 py-4">In Time</th>
+                              <th className="px-6 py-4">Out Time</th>
+                              <th className="px-6 py-4">Status</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                          {loadingAttendance ? (
+                              <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-400">Loading attendance...</td></tr>
+                          ) : recentAttendance.length === 0 ? (
+                              <tr><td colSpan="6" className="px-6 py-8 text-center text-slate-400">No recent activity found.</td></tr>
+                          ) : (
+                              recentAttendance.map((row, idx) => (
+                                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-6 py-4 text-slate-600">{row.date}</td>
+                                      <td className="px-6 py-4 font-bold text-slate-800">{row.employeeId}</td>
+                                      <td className="px-6 py-4 text-slate-600 truncate max-w-[150px]">{row.clientName}</td>
+                                      <td className="px-6 py-4 font-mono text-slate-500">{row.firstIn}</td>
+                                      <td className="px-6 py-4 font-mono text-slate-500">{row.lastOut}</td>
+                                      <td className="px-6 py-4">
+                                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                                              row.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                                              row.status === 'Working' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                              'bg-slate-50 text-slate-500 border-slate-200'
+                                          }`}>
+                                              {row.status}
+                                          </span>
+                                      </td>
+                                  </tr>
+                              ))
+                          )}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+
           {/* Charts Section */}
           <DashboardCharts quotations={quotations} />
 
@@ -295,8 +434,8 @@ export default function Dashboard() {
                         No {activeTab.toLowerCase()} found. Click "Create New" to start.
                       </td>
                     </tr>
-                  ) : (
-                    filteredQuotations.map((q) => (
+                   ) : (
+                    filteredQuotations.slice(0, 5).map((q) => (
                       <tr key={q.id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-6 py-4">
                           <span className="font-medium text-slate-700">{q.quotationNo}</span>
@@ -328,7 +467,7 @@ export default function Dashboard() {
                                      <CheckCircle className="w-4 h-4" />
                                  </button>
                              </ActionTooltip>
-
+ 
                              <ActionTooltip content="Mark as Failed">
                                  <button 
                                      onClick={() => handleStatusUpdate(q.id, 'Lost')}
@@ -342,7 +481,7 @@ export default function Dashboard() {
                                  </button>
                              </ActionTooltip>
                              <div className="w-px h-4 bg-slate-200 mx-1"></div>
-
+ 
                             <ActionTooltip content="Preview">
                               <Link 
                                 href={`/preview/${q.id}?type=${activeTab === 'Proformas' ? 'Proforma' : 'Quotation'}`} 
@@ -361,7 +500,7 @@ export default function Dashboard() {
                                 <Edit className="w-4 h-4" />
                               </Link>
                             </ActionTooltip>
-
+ 
                             <ActionTooltip content="Delete">
                               <button 
                                 onClick={() => handleDelete(q.id)}
@@ -381,15 +520,214 @@ export default function Dashboard() {
             
             {/* Pagination / Footer of Table */}
             <div className="p-4 border-t border-slate-100 flex justify-center">
-                <button className="text-sm text-blue-600 font-medium hover:underline">View All Quotations</button>
+                <Link 
+                    href={activeTab === 'Proformas' ? '/proforma' : '/quotation'}
+                    className="text-sm text-blue-600 font-bold flex items-center gap-2 hover:bg-blue-50 px-4 py-2 rounded-lg transition-all shadow-sm active:scale-95"
+                >
+                    View All {activeTab}
+                    <Plus className="w-4 h-4 rotate-45" />
+                </Link>
             </div>
           </div>
 
         </div>
+        <PendingQuotationsModal 
+            isOpen={showPendingModal} 
+            onClose={() => setShowPendingModal(false)} 
+            quotations={quotations}
+            type={activeTab === 'Proformas' ? 'Proforma' : 'Quotation'}
+        />
+
+        {/* Floating Pending Button - Blinks if active quotations exist */}
+        {quotations.some(q => q.status === 'Active') && (
+            <button 
+                onClick={() => setShowPendingModal(true)}
+                className="fixed bottom-8 right-8 z-[90] flex items-center justify-center p-4 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl shadow-orange-500/40 transition-all hover:scale-110 active:scale-95 group animate-bounce-subtle"
+                title="View Pending Quotations"
+            >
+                <div className="absolute inset-0 bg-orange-400 rounded-full animate-ping opacity-20"></div>
+                <div className="relative flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
+                    <FileText className="w-6 h-6" />
+                    <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[150px] transition-all duration-300 font-bold ml-1 text-sm">
+                        {quotations.filter(q => q.status === 'Active').length} Pending PIs
+                    </span>
+                </div>
+            </button>
+        )}
+
+        {/* Floating Pending Works Button - Blinks if active works exist */}
+        {works.some(w => w.status === 'pending' || w.status === 'active') && (
+            <button 
+                onClick={() => setShowPendingWorksModal(true)}
+                className="fixed bottom-24 right-8 z-[90] flex items-center justify-center p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl shadow-blue-500/40 transition-all hover:scale-110 active:scale-95 group animate-bounce-subtle"
+                title="View Pending Works"
+            >
+                <div className="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-20"></div>
+                <div className="relative flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
+                    <Briefcase className="w-6 h-6" />
+                    <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-[150px] transition-all duration-300 font-bold ml-1 text-sm">
+                        {works.filter(w => w.status === 'pending' || w.status === 'active').length} Pending Works
+                    </span>
+                </div>
+            </button>
+        )}
+
+        <PendingWorksModal 
+            isOpen={showPendingWorksModal} 
+            onClose={() => setShowPendingWorksModal(false)} 
+            works={works}
+        />
       </main>
     </div>
   );
 }
+
+// --- Modals ---
+
+const PendingWorksModal = ({ isOpen, onClose, works }) => {
+    if (!isOpen) return null;
+    const pending = works.filter(w => w.status === 'pending' || w.status === 'active');
+    
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+                <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-6 flex justify-between items-center text-white">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                            <Briefcase className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold">Pending Works</h3>
+                            <p className="text-blue-100 text-xs">Assigned tasks requiring completion</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+                
+                <div className="max-h-[60vh] overflow-y-auto p-6 space-y-3">
+                    {pending.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400">
+                            No pending works found.
+                        </div>
+                    ) : (
+                        pending.map((w) => (
+                            <div key={w.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-blue-200 hover:bg-blue-50/30 transition-all group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-blue-600 font-bold text-xs ring-1 ring-slate-100">
+                                        W
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-slate-800 line-clamp-1">{w.clientName}</h4>
+                                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                            <span className="font-medium text-orange-600">{w.status}</span>
+                                            <span>•</span>
+                                            <span className="truncate max-w-[150px]">{w.employeeName || 'Unassigned'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Link 
+                                        href={`/works`}
+                                        className="p-2.5 bg-white text-slate-400 hover:text-blue-600 rounded-xl shadow-sm border border-slate-100 transition-all hover:scale-110 active:scale-95"
+                                    >
+                                        <Eye className="w-5 h-5" />
+                                    </Link>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+                
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                    <button 
+                        onClick={onClose}
+                        className="px-6 py-2.5 bg-white text-slate-600 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
+                    >
+                        Close Window
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const PendingQuotationsModal = ({ isOpen, onClose, quotations, type }) => {
+    if (!isOpen) return null;
+    const pending = quotations.filter(q => q.status === 'Active');
+    
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-6 flex justify-between items-center text-white">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                            <FileText className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold">Pending {type}s</h3>
+                            <p className="text-blue-100 text-xs">These documents need your immediate attention</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+                
+                <div className="max-h-[60vh] overflow-y-auto p-6 space-y-3">
+                    {pending.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400">
+                            No pending documents found.
+                        </div>
+                    ) : (
+                        pending.map((q) => (
+                            <div key={q.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-blue-200 hover:bg-blue-50/30 transition-all group">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm text-blue-600 font-bold text-xs ring-1 ring-slate-100">
+                                        {type === 'Proforma' ? 'PI' : 'QU'}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-slate-800">{q.clientName}</h4>
+                                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                            <span className="font-mono text-blue-600">{q.quotationNo}</span>
+                                            <span>•</span>
+                                            <span>{new Date(q.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="text-right mr-4 hidden md:block">
+                                        <p className="text-sm font-bold text-slate-900">₹{q.totalAmount?.toLocaleString('en-IN')}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Total Value</p>
+                                    </div>
+                                    <Link 
+                                        href={`/preview/${q.id}?type=${type}`}
+                                        target="_blank"
+                                        className="p-2.5 bg-white text-slate-400 hover:text-blue-600 rounded-xl shadow-sm border border-slate-100 transition-all hover:scale-110 active:scale-95"
+                                    >
+                                        <Eye className="w-5 h-5" />
+                                    </Link>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+                
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                    <button 
+                        onClick={onClose}
+                        className="px-6 py-2.5 bg-white text-slate-600 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95"
+                    >
+                        Close Window
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- Helper Components ---
 

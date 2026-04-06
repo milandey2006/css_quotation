@@ -241,7 +241,7 @@ export default function ProformaList() {
                                         alert('This proforma is from an older version and does not have a shareable link yet.\n\nPlease click "Edit" and then "Save" once to generate a link.');
                                         return;
                                     }
-                                    const shareUrl = `https://css-quotation.vercel.app/share/${q.publicId}`;
+                                    const shareUrl = `${window.location.origin}/share/${q.publicId}`;
                                     navigator.clipboard.writeText(shareUrl)
                                         .then(() => alert('Share link copied to clipboard!'))
                                         .catch(() => alert('Failed to copy link.'));

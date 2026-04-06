@@ -174,7 +174,7 @@ Damage And Repair Not Cover In Warranty`
           return;
       }
       
-      const shareUrl = `https://css-quotation.vercel.app/share/${data.publicId}`;
+      const shareUrl = `${window.location.origin}/share/${data.publicId}`;
       
       try {
           await navigator.clipboard.writeText(shareUrl);

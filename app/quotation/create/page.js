@@ -255,7 +255,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
           return;
       }
       
-      const shareUrl = `https://css-quotation.vercel.app/share/${data.publicId}`;
+      const shareUrl = `${window.location.origin}/share/${data.publicId}`;
       
       try {
           await navigator.clipboard.writeText(shareUrl);

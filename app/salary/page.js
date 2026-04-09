@@ -79,12 +79,12 @@ export default function SalarySlipsPage() {
       });
 
       // Columns
-      const tableColumn = ["Employee", "Month", "Basic Salary", "Pre-Advance", "Net Pay"];
+      const tableColumn = ["Employee", "Month", "Basic Salary", "Advance Deducted", "Net Pay"];
       const tableRows = filteredSlips.map(slip => [
           slip.employeeName,
           slip.monthYear,
           (Number(slip.earnings?.basic) || 0).toLocaleString('en-IN'),
-          ((Number(slip.netPayable) || 0) + (Number(slip.deductions?.advance) || 0)).toLocaleString('en-IN'),
+          (Number(slip.deductions?.advance) || 0).toLocaleString('en-IN'),
           (Number(slip.netPayable) || 0).toLocaleString('en-IN')
       ]);
 
@@ -97,14 +97,14 @@ export default function SalarySlipsPage() {
 
       // Footer Summaries (Calculated manually to add below table)
       const totalBasic = filteredSlips.reduce((sum, s) => sum + (Number(s.earnings?.basic) || 0), 0);
-      const totalPreAdvance = filteredSlips.reduce((sum, s) => sum + ((Number(s.netPayable) || 0) + (Number(s.deductions?.advance) || 0)), 0);
+      const totalPreAdvance = filteredSlips.reduce((sum, s) => sum + (Number(s.deductions?.advance) || 0), 0);
       const totalNet = filteredSlips.reduce((sum, s) => sum + (Number(s.netPayable) || 0), 0);
 
       const finalY = doc.lastAutoTable.finalY + 10;
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text(`Total Basic: ${totalBasic.toLocaleString('en-IN')}`, 14, finalY);
-      doc.text(`Total Pre-Advance: ${totalPreAdvance.toLocaleString('en-IN')}`, 80, finalY);
+      doc.text(`Total Advance Deducted: ${totalPreAdvance.toLocaleString('en-IN')}`, 70, finalY);
       doc.text(`Total Net Pay: ${totalNet.toLocaleString('en-IN')}`, 150, finalY);
 
       doc.save("Salary_Report.pdf");
@@ -220,7 +220,7 @@ export default function SalarySlipsPage() {
                                 <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                     <th className="px-6 py-4">Employee</th>
                                     <th className="px-6 py-4">Month</th>
-                                    <th className="px-6 py-4">Pre-Advance</th>
+                                    <th className="px-6 py-4">Advance Deducted</th>
                                     <th className="px-6 py-4">Net Pay</th>
                                     <th className="px-6 py-4">Basic Salary</th>
                                     <th className="px-6 py-4 text-right">Actions</th>
@@ -246,8 +246,12 @@ export default function SalarySlipsPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-slate-700 font-medium">
-                                                ₹{((Number(slip.netPayable) || 0) + (Number(slip.deductions?.advance) || 0)).toLocaleString('en-IN')}
+                                            <div className={`font-medium ${
+                                                (Number(slip.deductions?.advance) || 0) > 0
+                                                    ? 'text-orange-600'
+                                                    : 'text-slate-400'
+                                            }`}>
+                                                ₹{(Number(slip.deductions?.advance) || 0).toLocaleString('en-IN')}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -308,11 +312,11 @@ export default function SalarySlipsPage() {
 
                     </div>
                     <div>
-                        <span className="text-slate-500 mr-2 text-xs uppercase tracking-wide">Pre-Advance Total:</span>
-                        <span className="font-bold text-blue-600 text-lg">
+                        <span className="text-slate-500 mr-2 text-xs uppercase tracking-wide">Advance Deducted:</span>
+                        <span className="font-bold text-orange-500 text-lg">
                             ₹{slips
                                 .filter(s => (filterEmployee ? s.employeeName === filterEmployee : true) && (filterMonth ? s.monthYear === filterMonth : true))
-                                .reduce((sum, s) => sum + ((Number(s.netPayable) || 0) + (Number(s.deductions?.advance) || 0)), 0)
+                                .reduce((sum, s) => sum + (Number(s.deductions?.advance) || 0), 0)
                                 .toLocaleString('en-IN')
                             }
                         </span>

@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import EstimatedPreview from '../../components/EstimatedPreview';
-import { Menu, Plus, Trash2, Printer, Save, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Menu, Plus, Trash2, Printer, Save, ToggleLeft, ToggleRight, Share2 } from 'lucide-react';
+import { buildShareSlug } from '../../utils/shareSlug';
 import { useReactToPrint } from 'react-to-print';
 
 function CreateEstimateForm() {
@@ -230,6 +231,24 @@ function CreateEstimateForm() {
                   >
                       <Save className="w-4 h-4" />
                       <span className="text-sm font-medium">{saveStatus === 'saved' ? 'Saved!' : 'Save'}</span>
+                  </button>
+
+                  <button 
+                      onClick={() => {
+                          if (!formData.publicId) {
+                              alert('Please save the estimate first to generate a shareable link.');
+                              return;
+                          }
+                          const slug = buildShareSlug(formData.billTo, formData.billNo, formData.publicId);
+                          const shareUrl = `${window.location.origin}/estimate/${slug}`;
+                          navigator.clipboard.writeText(shareUrl)
+                              .then(() => alert('Share link copied!\n\n' + shareUrl))
+                              .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-900/20"
+                  >
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm font-medium hidden md:inline">Share</span>
                   </button>
 
                   <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors shadow-lg shadow-slate-900/20">

@@ -32,27 +32,17 @@ export async function POST(request) {
         paidDays: Number(body.paidDays || 0),
     }).returning();
 
-    // Deduct Advance Balance from Employee if applicable
-    // If openingAdvanceBalance is provided (from UI edit), use that as base.
-    // Otherwise use SQL decrement (legacy behavior, though UI now sends it).
+    // Update employee's running advance balance:
+    // Closing = Opening + NewAdvanceGiven - DeductedThisMonth
     if (body.employeeId) {
-        let updateQuery = {};
-        
-        if (body.openingAdvanceBalance !== undefined) {
-             // User specified a total balance in UI (or it was auto-loaded)
-             // New Balance = Opening - CurrentDeduction
-             const newBalance = Math.max(0, Number(body.openingAdvanceBalance) - Number(body.deductions?.advance || 0));
-             updateQuery = { advanceBalance: newBalance };
-        } else if (Number(body.deductions?.advance || 0) > 0) {
-             // Fallback to direct deduction from DB value
-             updateQuery = { advanceBalance: sql`${employees.advanceBalance} - ${Number(body.deductions.advance)}` };
-        }
+        const opening = Number(body.openingAdvanceBalance || 0);
+        const given   = Number(body.newAdvanceGiven || 0);
+        const deducted = Number(body.deductions?.advance || 0);
+        const newBalance = Math.max(0, opening + given - deducted);
 
-        if (Object.keys(updateQuery).length > 0) {
-            await db.update(employees)
-                .set(updateQuery)
-                .where(eq(employees.id, Number(body.employeeId)));
-        }
+        await db.update(employees)
+            .set({ advanceBalance: newBalance })
+            .where(eq(employees.id, Number(body.employeeId)));
     }
 
     return NextResponse.json(newSlip[0], { status: 201 });

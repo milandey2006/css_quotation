@@ -81,11 +81,14 @@ export async function PUT(request, { params }) {
             .where(eq(salarySlips.id, parseInt(id)))
             .returning();
             
-        // Update Employee Balance Logic for PUT
+        // Update employee's running advance balance:
+        // Closing = Opening + NewAdvanceGiven - DeductedThisMonth
         if (body.employeeId && body.openingAdvanceBalance !== undefined) {
-             const newBalance = Math.max(0, Number(body.openingAdvanceBalance) - Number(body.deductions?.advance || 0));
+             const opening  = Number(body.openingAdvanceBalance || 0);
+             const given    = Number(body.newAdvanceGiven || 0);
+             const deducted = Number(body.deductions?.advance || 0);
+             const newBalance = Math.max(0, opening + given - deducted);
              
-             // Try to update by Code first
              await db.update(employees)
                 .set({ advanceBalance: newBalance })
                 .where(eq(employees.employeeCode, body.employeeId));

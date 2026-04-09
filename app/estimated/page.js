@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
+import { buildShareSlug } from '../utils/shareSlug';
 import { 
     Plus, Search, Trash2, Edit, FileText, 
     Filter, Calendar, ChevronDown, CheckCircle, 
-    MoreHorizontal, ArrowUpRight, Menu, Printer, X, Eye
+    MoreHorizontal, ArrowUpRight, Menu, Printer, X, Eye, Share2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
@@ -296,6 +297,23 @@ export default function EstimatedListPage() {
                                                         title="View"
                                                     >
                                                         <Eye className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            if (!est.publicId) {
+                                                                alert('This estimate is from an older version and does not have a shareable link yet.\n\nPlease open this estimate and save it once to generate a shareable link.');
+                                                                return;
+                                                            }
+                                                            const slug = buildShareSlug(est.clientName || est.billTo, est.billNo, est.publicId);
+                                                            const shareUrl = `${window.location.origin}/estimate/${slug}`;
+                                                            navigator.clipboard.writeText(shareUrl)
+                                                                .then(() => alert('Share link copied!\n\n' + shareUrl))
+                                                                .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
+                                                        }}
+                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                        title="Share"
+                                                    >
+                                                        <Share2 className="w-4 h-4" />
                                                     </button>
                                                     <button 
                                                         onClick={() => printSingleEstimate(est)}

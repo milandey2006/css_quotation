@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
+import { buildShareSlug } from '../utils/shareSlug';
 import { 
   Search, 
   Filter, 
@@ -241,10 +242,11 @@ export default function ProformaList() {
                                         alert('This proforma is from an older version and does not have a shareable link yet.\n\nPlease click "Edit" and then "Save" once to generate a link.');
                                         return;
                                     }
-                                    const shareUrl = `${window.location.origin}/share/${q.publicId}`;
+                                    const slug = buildShareSlug(q.clientName, q.quotationNo, q.publicId);
+                                    const shareUrl = `${window.location.origin}/proforma/${slug}`;
                                     navigator.clipboard.writeText(shareUrl)
-                                        .then(() => alert('Share link copied to clipboard!'))
-                                        .catch(() => alert('Failed to copy link.'));
+                                        .then(() => alert('Share link copied!\n\n' + shareUrl))
+                                        .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
                                 }}
                                 className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                               >

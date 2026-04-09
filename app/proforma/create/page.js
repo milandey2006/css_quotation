@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuotationForm from "../../components/QuotationForm";
 import QuotationPreview from "../../components/QuotationPreview";
+import { buildShareSlug } from '../../utils/shareSlug';
 
 function CreateProformaContent() {
   const router = useRouter();
@@ -173,15 +174,15 @@ Damage And Repair Not Cover In Warranty`
           alert('Please save the proforma invoice first to generate a shareable link.');
           return;
       }
-      
-      const shareUrl = `${window.location.origin}/share/${data.publicId}`;
-      
+      const client = data.receiver?.name || data.receiver?.company || 'client';
+      const slug = buildShareSlug(client, data.quotationNo, data.publicId);
+      const shareUrl = `${window.location.origin}/proforma/${slug}`;
       try {
           await navigator.clipboard.writeText(shareUrl);
-          alert('Link copied to clipboard!\n' + shareUrl);
+          alert('Share link copied!\n\n' + shareUrl);
       } catch (err) {
           console.error('Failed to copy: ', err);
-          alert('Failed to copy link. You can manually copy this:\n' + shareUrl);
+          alert('Failed to copy link. Copy manually:\n' + shareUrl);
       }
   };
 

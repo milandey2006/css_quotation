@@ -33,6 +33,7 @@ export default function EditSalarySlip() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentAdvanceBalance, setCurrentAdvanceBalance] = useState(0);
+  const [newAdvanceGiven, setNewAdvanceGiven] = useState(0); // Fresh advance given this month
   const [advanceRows, setAdvanceRows] = useState([{ id: 1, month: '', amount: 0 }]); // Dynamic advance deductions
 
   // Initial State
@@ -229,6 +230,7 @@ export default function EditSalarySlip() {
             totalDeductions,
             netPayable: netPay,
             openingAdvanceBalance: currentAdvanceBalance,
+            newAdvanceGiven: newAdvanceGiven,
         };
 
         const res = await fetch(`/api/salary/${id}`, {
@@ -338,24 +340,39 @@ export default function EditSalarySlip() {
                                 <label className="text-xs font-bold text-red-700">Advance Salary Deductions</label>
                              </div>
 
-                             {/* Dynamic Advance Balance Display */}
-                             <div className="mb-3 bg-white border border-red-200 rounded p-2 text-xs flex justify-between items-center shadow-sm">
-                                <div className="text-slate-500 flex items-center gap-2">
-                                    <span>Total:</span>
-                                    <div className="relative w-24">
-                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                                        <input 
-                                            type="number" 
-                                            value={currentAdvanceBalance}
-                                            onChange={(e) => setCurrentAdvanceBalance(Number(e.target.value))}
-                                            className="w-full pl-5 pr-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-slate-700"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="text-red-700 font-bold flex items-center gap-1">
-                                    <span>Remaining:</span>
-                                    <span className="text-sm">₹{Math.max(0, currentAdvanceBalance - data.deductions.advance)}</span>
-                                </div>
+                             {/* Advance Balance Summary */}
+                             <div className="mb-3 bg-white border border-red-200 rounded p-3 text-xs shadow-sm space-y-2">
+                                 <div className="flex justify-between items-center">
+                                     <span className="text-slate-500">Opening Balance</span>
+                                     <span className="font-bold text-slate-700">₹{currentAdvanceBalance.toLocaleString('en-IN')}</span>
+                                 </div>
+                                 <div className="flex justify-between items-center">
+                                     <span className="text-green-700 font-medium">+ New Advance Given</span>
+                                     <div className="relative w-28">
+                                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                                         <input
+                                             type="number"
+                                             min="0"
+                                             value={newAdvanceGiven || ''}
+                                             onChange={(e) => setNewAdvanceGiven(Number(e.target.value))}
+                                             placeholder="0"
+                                             className="w-full pl-5 pr-2 py-1 border border-green-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500 font-semibold text-green-700 text-right"
+                                         />
+                                     </div>
+                                 </div>
+                                 <div className="flex justify-between items-center">
+                                     <span className="text-red-600 font-medium">− Deducted This Month</span>
+                                     <span className="font-bold text-red-600">₹{data.deductions.advance.toLocaleString('en-IN')}</span>
+                                 </div>
+                                 <div className="flex justify-between items-center border-t border-slate-200 pt-2">
+                                     <span className="font-bold text-slate-700">Closing Balance</span>
+                                     <span className={`font-bold text-sm ${
+                                         (currentAdvanceBalance + newAdvanceGiven - data.deductions.advance) > 0
+                                             ? 'text-red-700' : 'text-emerald-600'
+                                     }`}>
+                                         ₹{Math.max(0, currentAdvanceBalance + newAdvanceGiven - data.deductions.advance).toLocaleString('en-IN')}
+                                     </span>
+                                 </div>
                              </div>
 
                              <div className="space-y-2 mb-2">

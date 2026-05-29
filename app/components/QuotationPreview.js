@@ -351,12 +351,12 @@ const QuotationPreview = ({ data }) => {
                                    if (parts.length > 1) {
                                        return (
                                            <p key={i}>
-                                               <span className="font-bold text-black">• {parts[0].trim()}{parts[1]}</span>
+                                               <span className="font-bold text-black">* {parts[0].trim()}{parts[1]}</span>
                                                <span dangerouslySetInnerHTML={{ __html: term.substring(parts[0].length + 1).trim() }} />
                                            </p>
                                        );
                                    }
-                                   return term.trim() ? <p key={i} dangerouslySetInnerHTML={{ __html: '• ' + term }} /> : null;
+                                   return term.trim() ? <p key={i} dangerouslySetInnerHTML={{ __html: '* ' + term }} /> : null;
                              })}
                            </div>
                         </div>
@@ -416,49 +416,99 @@ const QuotationPreview = ({ data }) => {
                                     if (parts.length > 1) {
                                         return (
                                             <p key={i}>
-                                                <span className="font-bold text-black">• {parts[0].trim()}{parts[1]}</span>
+                                                <span className="font-bold text-black">* {parts[0].trim()}{parts[1]}</span>
                                                 <span dangerouslySetInnerHTML={{ __html: term.substring(parts[0].length + 1).trim() }} />
                                             </p>
                                         );
                                     }
-                                    return term.trim() ? <p key={i} dangerouslySetInnerHTML={{ __html: '• ' + term }} /> : null;
+                                    return term.trim() ? <p key={i} dangerouslySetInnerHTML={{ __html: '* ' + term }} /> : null;
                                 })}
                              </div>
-                             {/* <div className="mt-4">
-                                <p><span className="font-bold text-black">• Complain will be received by Email:-</span> <a href="mailto:info@championsecuritysystem.com" className="text-blue-600 underline">info@championsecuritysystem.com</a></p>
-                                <p className="pl-2">with detail (like camera number, place etc). Time:- 10:30am To 6:30pm</p>
-                                <p className="pl-2">Service will be provided in 24 to 48 hours after call received by Authorized Person</p>
-                             </div> */}
                         </div>
                     </div>
                     {/* Footer Logos & Certificates - Hide for Proforma */}
                     {safeData.type !== 'Proforma' && (
                         <>
-                            <div className="text-center mb-6">
-                                <div className="flex justify-center items-center gap-4 mb-2">
-                                    <div className="h-10 w-24 relative">
-                                        <img src="https://upload.wikimedia.org/wikipedia/hi/thumb/e/e7/GeM-logo.svg/1280px-GeM-logo.svg.png" alt="Gem" className="w-48 object-contain" />
+                            {/* Visiting Card Services Block */}
+                            <div className="flex flex-col gap-2 text-left w-full mb-4 px-4 bg-gray-50/50 py-2 rounded-md border border-gray-100">
+                                <div className="flex flex-row justify-between w-full border-b border-gray-200 pb-2">
+                                    {/* Sales */}
+                                    <div className="flex-1 pr-2">
+                                        <h4 className="text-[11px] font-bold text-blue-900 mb-1 text-center">Sales</h4>
+                                        <ul className="text-[9px] text-gray-800 space-y-0.5 list-disc pl-3">
+                                            <li>CCTV Cameras & Recorders</li>
+                                            <li>Access Control & Biometric Devices</li>
+                                            <li>Networking Accessories</li>
+                                            <li>Alarm Systems</li>
+                                            <li>Surveillance Accessories</li>
+                                        </ul>
+                                    </div>
+
+                                    {/* Installation Services */}
+                                    <div className="flex-[1.5] flex flex-col border-l border-gray-200 pl-4">
+                                        <h4 className="text-[11px] font-bold text-blue-900 mb-1 text-center">Installation Services</h4>
+                                        <div className="flex gap-2 text-[9px] text-gray-800 w-full justify-between">
+                                            <ul className="space-y-0.5 list-disc pl-3 flex-1">
+                                                <li>AI-Based Video Analytics</li>
+                                                <li>Access Control Installation</li>
+                                                <li>End-to-End Security Solutions</li>
+                                                <li>Structured Cabling</li>
+                                                <li>VMS Server & NAS Solution</li>
+                                            </ul>
+                                            <ul className="space-y-0.5 list-disc pl-3 flex-1">
+                                                <li>Monitoring & Mobile App</li>
+                                                <li>Smart Alerts & Real-Time</li>
+                                                <li>PAN-India Project Support</li>
+                                                <li>System Health Check</li>
+                                                <li>On-call Technical Support</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
-                                <p className="text-red-600 font-bold text-sm">Trademark registration number-5290052/ Certificate No- 3149953</p>
-                                <p className="text-red-600 font-bold text-sm">ISO-9001 : 2015. CERTIFICATE NO- 250210Q105---</p>
-                                <p className="text-xs text-gray-700 mt-1">
-                                    We are the authorized Registered channel partner of <span className="font-bold text-red-600">Axis, Pelco, Hanwha, Honeywell, Panasonic I-Pro, D-LINK, TP-LINK</span> Surveillance product and Government Approved <span className="font-bold text-red-600 underline">GEM & Trademark</span> registered Company
-                                </p>
+                                
+                                {/* AI Technology */}
+                                <div className="w-full text-center mt-1">
+                                    <h4 className="text-[11px] font-bold text-blue-900 mb-1">AI Technology Security Solutions</h4>
+                                    <p className="text-[9px] text-gray-800 flex flex-wrap justify-center gap-1.5 items-center">
+                                        <span>• Face Recognition</span>
+                                        <span>• Vehicle Detection</span>
+                                        <span>• Intrusion Detection</span>
+                                        <span>• People Counting</span>
+                                        <span>• Smart Alerts</span>
+                                        <span>• Residential Security</span>
+                                        <span>• Commercial Security</span>
+                                        <span>• Industrial Surveillance Warehouse & Society Solutions</span>
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex flex-wrap gap-6 justify-between items-center px-4 opacity-90 mb-8">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Axis_Communications_logo.svg/1280px-Axis_Communications_logo.svg.png" alt="Axis" className="h-10 object-contain" />
-                                <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-15 object-contain" />
-                                <img src="https://www.secomp.fr/thumbor/o7rRmg8K9vuWJVwmE2VThnpQivM=/filters:cachevalid(2022-09-23T12:17:17.716683):strip_icc():strip_exif()/cms_secde/cms/ueber_uns/markenwelt/hersteller_logos/i-pro_logo_rgb_blue.png" alt="Panasonic" className="h-10 object-contain" />
-                                <img src="https://www.matrixcomsec.com/products/wp-content/uploads/2022/01/Matrix-ComSec_Logo1new.png" alt="Matrix" className="h-10 object-contain" />
-                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnzwl-53GN5z4FI3ITAH6aA946jNx65kaU_Q&s" alt="Hanwha" className="h-10 object-contain" />
-                                <img src="https://www.actility.com/wp-content/uploads/2024/12/Milesight-logo.png" alt="Milesight" className="h-10 object-contain" />
-                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-20 object-contain" />
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/D-Link_wordmark.svg/960px-D-Link_wordmark.svg.png" alt="Honeywell" className="h-10 object-contain" />
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Alcatel-Lucent_logo.svg/1280px-Alcatel-Lucent_logo.svg.png" alt="Honeywell" className="h-10 object-contain" />
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/TPLINK_Logo_2.svg/1280px-TPLINK_Logo_2.svg.png" alt="Honeywell" className="h-10 object-contain" />
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Netgear.png" alt="Honeywell" className="h-5 object-contain" />
-                                <img src="https://www.nit.ae/wp-content/uploads/2022/11/MS_logo_CBlue_CMYK-1-1024x212.png" alt="Milestone" className="h-10 object-contain" />
+
+                            {/* Trademark & ISO */}
+                            <div className="text-center mb-4">
+                                <p className="text-red-600 font-bold text-[11px]">Trademark -5290052/ Certificate No- 3149953 ISO-9001 : 2015. CERTIFICATE NO- 250210Q105   </p>
+                            </div>
+
+                            {/* Logos Section */}
+                            <div className="text-center mb-6">
+                                <h4 className="text-[12px] font-bold text-blue-900 mb-3 uppercase border-b border-gray-300 pb-1 inline-block">Authorized / Supported Brands</h4>
+                                <div className="flex flex-wrap gap-x-6 gap-y-4 justify-center items-center px-4 opacity-90">
+                                    <img src="https://www.vivotek.com/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTIyNDYsInB1ciI6ImJsb2JfaWQifX0=--4c3e2523882130839b9c5ec907aebf7e1c6cf6e9/VIVOTEK%20640X360.jpg" alt="Vivotek" className="h-10 object-contain" />
+                                    <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-10 object-contain" />
+                                    <img src="https://www.secomp.fr/thumbor/o7rRmg8K9vuWJVwmE2VThnpQivM=/filters:cachevalid(2022-09-23T12:17:17.716683):strip_icc():strip_exif()/cms_secde/cms/ueber_uns/markenwelt/hersteller_logos/i-pro_logo_rgb_blue.png" alt="Panasonic" className="h-4 object-contain" />
+                                    <img src="https://www.matrixcomsec.com/products/wp-content/uploads/2022/01/Matrix-ComSec_Logo1new.png" alt="Matrix" className="h-5 object-contain" />
+                                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnzwl-53GN5z4FI3ITAH6aA946jNx65kaU_Q&s" alt="Hanwha" className="h-5 object-contain" />
+                                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-14 object-contain" />
+                                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXXUqObfshywppYZKr2Cawp1qPZO0glNL94Q&s" alt="Milesight" className="h-8 object-contain" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/D-Link_wordmark.svg/960px-D-Link_wordmark.svg.png" alt="D-Link" className="h-4 object-contain" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Alcatel-Lucent_logo.svg/1280px-Alcatel-Lucent_logo.svg.png" alt="Alcatel-Lucent" className="h-8 object-contain" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/TPLINK_Logo_2.svg/1280px-TPLINK_Logo_2.svg.png" alt="TP-Link" className="h-8 object-contain" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Netgear.png" alt="Netgear" className="h-3 object-contain" />
+                                    <img src="https://fgtechstore.com/wp-content/uploads/2025/02/logo-grandstream.png" alt="GrandStream" className="h-8 object-contain" />
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7d/Mantra_Softech.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Mantra" className="h-6 object-contain" />
+                                    <img src="https://www.nit.ae/wp-content/uploads/2022/11/MS_logo_CBlue_CMYK-1-1024x212.png" alt="Milestone" className="h-5 object-contain" />
+                                    <img src="https://www.networkoptix.com/hs-fs/hubfs/nx.jpg?width=800&height=245&name=nx.jpg" alt="network-optix" className="h-10 object-contain" />
+                                    <img src="https://www.pincvision.com/assets/uploads/References/_800x418_crop_center-center_82_none/partner-logos_Genetec.png?mtime=1735826856" alt="Genetec" className="h-10 object-contain" />
+                                    <img src="https://old.roi4cio.com/fileadmin/user_upload/Wisenet-WAVE-logo-cropped.png" alt="Genetec" className="h-3 object-contain" />
+                                </div>
                             </div>
 
                             {/* Contact & Links Footer */}

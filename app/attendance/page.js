@@ -7,6 +7,8 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function AttendancePage() {
   const { user, isLoaded } = useUser();
@@ -37,6 +39,8 @@ export default function AttendancePage() {
   const [remarks, setRemarks] = useState({});
   const [editingRemark, setEditingRemark] = useState(null); // { employeeId, date, currentRemark }
   const [newRemarkText, setNewRemarkText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, row: null });
 
   // Load Data
   useEffect(() => {
@@ -137,7 +141,6 @@ export default function AttendancePage() {
         endTime: lastOutPunch ? new Date(lastOutPunch.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
         hours,
         status,
-        status,
         mapLink: group.locations.length > 0 ? `https://www.google.com/maps?q=${group.locations[0].lat},${group.locations[0].lng}` : '#',
         remark: remarks[group.id] || ''
       };
@@ -174,9 +177,8 @@ export default function AttendancePage() {
   const [showPreview, setShowPreview] = useState(false);
 
   const handlePreviewReport = () => {
-      console.log("preview button clicked");
       if (!reportStartDate || !reportEndDate) {
-          alert("Please select both Start Date and End Date for the report.");
+          toast.warning("Please select both Start Date and End Date for the report.");
           return;
       }
 
@@ -187,7 +189,7 @@ export default function AttendancePage() {
           end.setHours(23,59,59,999);
 
           if (start > end) {
-              alert("Start Date cannot be after End Date.");
+              toast.error("Start Date cannot be after End Date.");
               return;
           }
 
@@ -206,7 +208,7 @@ export default function AttendancePage() {
           });
 
           if (reportRows.length === 0) {
-              alert("No records found for the selected criteria.");
+              toast.info("No records found for the selected criteria.");
               return;
           }
 
@@ -215,7 +217,7 @@ export default function AttendancePage() {
 
       } catch (err) {
           console.error("Preview Error:", err);
-          alert("An error occurred while generating the preview.");
+          toast.error("An error occurred while generating the preview.");
       }
   };
 
@@ -271,16 +273,17 @@ export default function AttendancePage() {
 
           const fileNameData = reportEmployeeName ? `_${reportEmployeeName.replace(/\s+/g, '_')}` : '';
           doc.save(`Attendance_Report${fileNameData}_${reportStartDate}_to_${reportEndDate}.pdf`);
-          console.log("PDF saved");
+          toast.success("PDF saved successfully");
       } catch (err) {
           console.error("Export Error:", err);
-          alert("An error occurred while exporting the report.");
+          toast.error("An error occurred while exporting the report.");
       }
   };
 
 
   const handleSaveRemark = async () => {
-      if (!editingRemark) return;
+      if (!editingRemark || isSaving) return;
+      setIsSaving(true);
       try {
           const res = await fetch('/api/attendance/remarks', {
               method: 'POST',
@@ -298,20 +301,21 @@ export default function AttendancePage() {
                   ...prev,
                   [editingRemark.id]: savedRemark.remark
               }));
+              toast.success('Remark saved');
               setEditingRemark(null);
               setNewRemarkText('');
           } else {
-              alert('Failed to save remark');
+              toast.error('Failed to save remark');
           }
       } catch (e) {
           console.error(e);
-          alert('Error saving remark');
+          toast.error('Error saving remark');
+      } finally {
+          setIsSaving(false);
       }
   };
 
   const handleDelete = async (row) => {
-      if (!confirm(`Are you sure you want to delete attendance for ${row.employeeId} on ${row.date}?`)) return;
-
       // Delete all punches for this row
       try {
           // Identify IDs to delete
@@ -329,11 +333,11 @@ export default function AttendancePage() {
 
           // Refresh locally
           setAttendanceData(prev => prev.filter(p => !punchIds.includes(p.id)));
-          alert('Record deleted successfully');
+          toast.success('Record deleted successfully');
 
       } catch (e) {
           console.error(e);
-          alert('Failed to delete records');
+          toast.error('Failed to delete records');
       }
   };
 
@@ -357,7 +361,7 @@ export default function AttendancePage() {
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-slate-50 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-7xl mx-auto space-y-6">
           
           {/* Header & Report Tools */}
@@ -382,7 +386,7 @@ export default function AttendancePage() {
             </div>
 
             {/* Report Generator Section */}
-            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col md:flex-row items-end md:items-center gap-4">
+            <div className="bg-white/80 backdrop-blur-md border border-white/60 p-4 rounded-2xl shadow-xl shadow-slate-200/40 flex flex-col md:flex-row items-end md:items-center gap-4">
                  <div className="flex-1 w-full md:w-auto">
                     <label className="block text-xs font-semibold text-blue-800 mb-1 uppercase tracking-wide">Report Start Date</label>
                     <input 
@@ -453,7 +457,7 @@ export default function AttendancePage() {
           </div>
 
           {/* Table */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl shadow-xl shadow-slate-200/40 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
@@ -498,15 +502,21 @@ export default function AttendancePage() {
                             {row.remark}
                         </td>
                         <td className="px-6 py-4 text-right flex justify-end gap-2">
-                          <a 
-                            href={row.mapLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                            title="View on Map"
-                          >
-                            <MapPin className="w-4 h-4" />
-                          </a>
+                          {row.mapLink !== '#' ? (
+                            <a 
+                              href={row.mapLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              title="View on Map"
+                            >
+                              <MapPin className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <div className="inline-flex items-center justify-center p-2 text-slate-200 cursor-not-allowed" title="No location data">
+                              <MapPin className="w-4 h-4" />
+                            </div>
+                          )}
                           
                           {isSuperAdmin && (
                             <>
@@ -525,7 +535,7 @@ export default function AttendancePage() {
                           
                           {isSuperAdmin && (
                               <button 
-                                onClick={() => handleDelete(row)}
+                                onClick={() => setConfirmModal({ isOpen: true, row })}
                                 className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                 title="Delete Record"
                               >
@@ -649,14 +659,26 @@ export default function AttendancePage() {
                       </button>
                       <button 
                           onClick={handleSaveRemark}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md shadow-blue-200"
+                          disabled={isSaving}
+                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/30 disabled:opacity-70 flex items-center gap-2"
                       >
+                          {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                           Save Remark
                       </button>
                   </div>
               </div>
           </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, row: null })}
+        onConfirm={() => {
+            if (confirmModal.row) handleDelete(confirmModal.row);
+        }}
+        title="Delete Attendance Record"
+        message={`Are you sure you want to delete attendance for ${confirmModal.row?.employeeId} on ${confirmModal.row?.date}?`}
+      />
 
     </div>
   );

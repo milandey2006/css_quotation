@@ -33,7 +33,7 @@ export default function ProformaList() {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/proformas');
+      const res = await fetch('/api/proformas?basic=true');
       if (!res.ok) {
         throw new Error('Failed to fetch');
       }
@@ -93,11 +93,35 @@ export default function ProformaList() {
     }
   };
 
-  const filteredInvoices = invoices.filter(q => 
-    (q.clientName && q.clientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.quotationNo && q.quotationNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.data?.receiver?.phone && q.data.receiver.phone.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredInvoices = invoices.filter(q => {
+    const term = searchTerm.toLowerCase();
+    
+    if (
+        (q.clientName && q.clientName.toLowerCase().includes(term)) ||
+        (q.quotationNo && q.quotationNo.toLowerCase().includes(term)) ||
+        (q.receiverPhone && q.receiverPhone.toLowerCase().includes(term)) ||
+        (q.receiverCompany && q.receiverCompany.toLowerCase().includes(term)) ||
+        (q.receiverName && q.receiverName.toLowerCase().includes(term)) ||
+        (q.subject && q.subject.toLowerCase().includes(term)) ||
+        (q.data?.subject && q.data.subject.toLowerCase().includes(term))
+    ) {
+        return true;
+    }
+
+    let items = q.items || q.data?.items;
+    if (!items && q.itemsText) {
+        try { items = JSON.parse(q.itemsText); } catch(e) {}
+    }
+
+    if (items && Array.isArray(items)) {
+        return items.some(item => 
+            (item.make && String(item.make).toLowerCase().includes(term)) ||
+            (item.description && String(item.description).toLowerCase().includes(term))
+        );
+    }
+    
+    return false;
+  });
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans relative overflow-x-hidden">
@@ -150,6 +174,7 @@ export default function ProformaList() {
                   <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     <th className="px-6 py-4">PI No</th>
                     <th className="px-6 py-4">Client</th>
+                    <th className="px-6 py-4">Subject</th>
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4">Total Amount</th>
                     <th className="px-6 py-4">Status</th>
@@ -177,6 +202,11 @@ export default function ProformaList() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-slate-800">{q.clientName}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-slate-600 text-sm truncate max-w-[200px] cursor-pointer hover:whitespace-normal hover:overflow-visible hover:relative z-10 bg-transparent hover:bg-white hover:shadow-lg hover:p-2 rounded-lg transition-all" title={q.subject || q.data?.subject}>
+                            {q.subject || q.data?.subject || '-'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-slate-500 text-sm">
                           {new Date(q.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}

@@ -52,8 +52,13 @@ export default function PunchPage() {
       },
       (error) => {
         setStatus('error');
-        setMessage('Unable to retrieve your location. Please allow location access.');
+        setMessage('Unable to retrieve your location. Please ensure location services are enabled on your device and browser.');
         console.error("Geo Error:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };

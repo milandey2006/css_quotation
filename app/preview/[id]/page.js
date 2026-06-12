@@ -54,8 +54,13 @@ export default function PreviewPage({ params }) {
         const client = data.receiver?.name || data.receiver?.company || data.clientName || 'Client';
         const docSubject = data.subject || (type === 'Estimate' ? 'Estimate' : 'Quotation');
         document.title = `${docSubject} - ${client}`;
+
+        // Auto print if requested
+        if (searchParams.get('print') === 'true') {
+            setTimeout(() => window.print(), 500);
+        }
      }
-  }, [data, type]);
+  }, [data, type, searchParams]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   if (error) return <div className="flex items-center justify-center min-h-screen text-red-600">{error}</div>;

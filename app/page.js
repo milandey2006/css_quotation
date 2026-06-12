@@ -46,12 +46,14 @@ export default function Dashboard() {
   const [recentAttendance, setRecentAttendance] = useState([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
+  const [initialLoad, setInitialLoad] = useState(true);
+
   useEffect(() => {
     const role = user?.publicMetadata?.role;
-    if (isLoaded && (role === 'admin' || role === 'super-admin')) {
+    if (isLoaded && (role === 'admin' || role === 'super-admin') && !initialLoad) {
         fetchDocuments();
     }
-  }, [activeTab, isLoaded, user]);
+  }, [activeTab]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -60,8 +62,7 @@ export default function Dashboard() {
         if (role !== 'admin' && role !== 'super-admin') {
             router.push('/works');
         } else {
-            fetchWorks();
-            fetchRecentAttendance();
+            fetchAllData();
             
             // Fetch local estimates counts
             const estimates = JSON.parse(localStorage.getItem('estimates') || '[]');
@@ -85,14 +86,38 @@ export default function Dashboard() {
     }
   }, [loading, quotations.length, works.length]);
 
-  const fetchRecentAttendance = async () => {
-    setLoadingAttendance(true);
-    try {
-        const res = await fetch('/api/punch');
-        const allPunches = await res.json();
-        
+  const fetchAllData = async () => {
+      setLoading(true);
+      setLoadingAttendance(true);
+      try {
+          const endpoint = activeTab === 'Proformas' ? '/api/proformas?limit=200' : '/api/quotations?limit=200';
+          
+          const [docRes, worksRes, punchRes] = await Promise.all([
+              fetch(endpoint),
+              fetch('/api/works'),
+              fetch('/api/punch?limit=100')
+          ]);
+
+          const docData = await docRes.json();
+          setQuotations(docData);
+
+          const wData = await worksRes.json();
+          if (Array.isArray(wData)) setWorks(wData);
+
+          const allPunches = await punchRes.json();
+          processAttendance(allPunches);
+
+      } catch (e) {
+          console.error("Error fetching dashboard data:", e);
+      } finally {
+          setLoading(false);
+          setLoadingAttendance(false);
+          setInitialLoad(false);
+      }
+  };
+
+  const processAttendance = (allPunches) => {
         if (Array.isArray(allPunches)) {
-            // Filter for last 2 days (today and yesterday)
             const today = new Date();
             const yesterday = new Date();
             yesterday.setDate(today.getDate() - 1);
@@ -100,7 +125,6 @@ export default function Dashboard() {
             const todayStr = today.toLocaleDateString();
             const yesterdayStr = yesterday.toLocaleDateString();
             
-            // Group by employee and date
             const groups = {};
             allPunches.forEach(p => {
                 const dateStr = new Date(p.timestamp).toLocaleDateString();
@@ -135,11 +159,19 @@ export default function Dashboard() {
             rows.sort((a,b) => b.rawDate - a.rawDate);
             setRecentAttendance(rows);
         }
-    } catch (e) {
-        console.error("Error fetching attendance:", e);
-    } finally {
-        setLoadingAttendance(false);
-    }
+  };
+
+  const fetchRecentAttendance = async () => {
+      setLoadingAttendance(true);
+      try {
+          const res = await fetch('/api/punch?limit=100');
+          const allPunches = await res.json();
+          processAttendance(allPunches);
+      } catch (e) {
+          console.error("Error fetching attendance:", e);
+      } finally {
+          setLoadingAttendance(false);
+      }
   };
 
   const fetchWorks = async () => {
@@ -157,7 +189,7 @@ export default function Dashboard() {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const endpoint = activeTab === 'Proformas' ? '/api/proformas' : '/api/quotations';
+      const endpoint = activeTab === 'Proformas' ? '/api/proformas?limit=200' : '/api/quotations?limit=200';
       const res = await fetch(endpoint);
       const data = await res.json();
       setQuotations(data);

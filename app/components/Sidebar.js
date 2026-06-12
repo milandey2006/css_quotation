@@ -58,6 +58,20 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleSidebar }) => {
             ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
             md:translate-x-0 ${isCollapsed ? 'w-20' : 'w-64'}`}
         >
+            {/* Desktop Collapse Button */}
+            <div className="hidden md:flex justify-end p-4 pb-0">
+                <button 
+                    onClick={toggleSidebar}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                >
+                    {isCollapsed ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
+                    ) : (
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+                    )}
+                </button>
+            </div>
+
             {/* Profile Section */}
             <div className={`p-4 flex flex-col items-center border-b border-slate-700/50 relative transition-all ${isCollapsed ? 'py-6' : 'p-8'}`}>
                 <button onClick={onClose} className="absolute top-4 right-4 md:hidden text-slate-400 hover:text-white">
@@ -107,19 +121,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleSidebar }) => {
                 })}
             </nav>
 
-            {/* Collapse Toggle */}
-            <div className="p-4 border-t border-slate-700/50 hidden md:flex justify-end">
-                <button 
-                    onClick={toggleSidebar}
-                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                >
-                    {isCollapsed ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
-                    ) : (
-                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-                    )}
-                </button>
-            </div>
+
         </div>
     </>
   );

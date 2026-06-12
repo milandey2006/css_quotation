@@ -10,8 +10,8 @@ import {
     MoreHorizontal, ArrowUpRight, Menu, Printer, X, Eye, Share2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useReactToPrint } from 'react-to-print';
-import EstimatedPreview from '../components/EstimatedPreview';
+import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function EstimatedListPage() {
   const router = useRouter();
@@ -20,27 +20,9 @@ export default function EstimatedListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
   const [isPreview, setIsPreview] = useState(false);
-  const [printingEstimate, setPrintingEstimate] = useState(null);
-  const printRef = React.useRef();
-
-  const handlePrint = useReactToPrint({
-      content: () => printRef.current,
-      documentTitle: printingEstimate ? `Estimate_${printingEstimate.billNo.replace(/\//g, '-')}` : 'Estimate',
-      onAfterPrint: () => setPrintingEstimate(null)
-  });
-
-  // Trigger print when estimate is selected and rendered
-  useEffect(() => {
-    if (printingEstimate) {
-        handlePrint();
-    }
-  }, [printingEstimate]);
-
-  const printSingleEstimate = (est) => {
-      setPrintingEstimate(est);
-  };
 
   // Totals Calculation
   const calculateTotals = (items) => {
@@ -61,7 +43,7 @@ export default function EstimatedListPage() {
 
   const fetchEstimates = async () => {
     try {
-      const res = await fetch('/api/estimates');
+      const res = await fetch('/api/estimates?basic=true');
       if (res.ok) {
         const data = await res.json();
         setEstimates(data);
@@ -74,18 +56,17 @@ export default function EstimatedListPage() {
   };
 
   const deleteEstimate = async (id) => {
-    if (confirm('Are you sure you want to delete this estimate?')) {
-      try {
-        const res = await fetch(`/api/estimates/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          setEstimates(prev => prev.filter(e => e.id !== id));
-        } else {
-          alert('Failed to delete estimate');
-        }
-      } catch (error) {
-        console.error('Error deleting estimate:', error);
-        alert('Error deleting estimate');
+    try {
+      const res = await fetch(`/api/estimates/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setEstimates(prev => prev.filter(e => e.id !== id));
+        toast.success('Estimate deleted successfully');
+      } else {
+        toast.error('Failed to delete estimate');
       }
+    } catch (error) {
+      console.error('Error deleting estimate:', error);
+      toast.error('Error deleting estimate');
     }
   };
 
@@ -117,9 +98,9 @@ export default function EstimatedListPage() {
   const paidCount = estimates.filter(e => (Number(e.totalAmount) - Number(e.paidAmount || 0)) <= 0).length;
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans">
        {/* Sidebar */}
-       <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-40 bg-white shadow-xl md:shadow-none ${isSidebarCollapsed ? 'w-20' : 'w-64'} border-r border-slate-200`}>
+       <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-40 bg-white/80 backdrop-blur-xl shadow-2xl border-r border-white/20 ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
         <Sidebar 
             activePage="Estimated" 
             onClose={() => setIsMobileMenuOpen(false)}
@@ -131,7 +112,7 @@ export default function EstimatedListPage() {
        {/* Overlay */}
        {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/50 z-30 md:hidden"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 md:hidden transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -164,7 +145,7 @@ export default function EstimatedListPage() {
 
                             <Link 
                                 href="/estimated/create" 
-                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-lg shadow-emerald-600/20 transition-all text-sm font-medium ml-auto md:ml-0"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-95 text-sm font-semibold ml-auto md:ml-0"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>New Estimate</span>
@@ -223,7 +204,7 @@ export default function EstimatedListPage() {
                 )}
 
                 {/* Table */}
-                <div className={`bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm ${isPreview ? 'border-none shadow-none' : ''}`}>
+                <div className={`bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-xl shadow-slate-200/40 ${isPreview ? 'border-none shadow-none bg-white' : ''}`}>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
@@ -301,14 +282,17 @@ export default function EstimatedListPage() {
                                                     <button 
                                                         onClick={() => {
                                                             if (!est.publicId) {
-                                                                alert('This estimate is from an older version and does not have a shareable link yet.\n\nPlease open this estimate and save it once to generate a shareable link.');
+                                                                toast.info('This estimate needs a shareable link', {
+                                                                    description: 'Please open this estimate and save it once to generate a shareable link.',
+                                                                    duration: 5000
+                                                                });
                                                                 return;
                                                             }
                                                             const slug = buildShareSlug(est.clientName || est.billTo, est.billNo, est.publicId);
                                                             const shareUrl = `${window.location.origin}/estimate/${slug}`;
                                                             navigator.clipboard.writeText(shareUrl)
-                                                                .then(() => alert('Share link copied!\n\n' + shareUrl))
-                                                                .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
+                                                                .then(() => toast.success('Share link copied to clipboard!'))
+                                                                .catch(() => toast.error('Failed to copy link.'));
                                                         }}
                                                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                         title="Share"
@@ -316,7 +300,7 @@ export default function EstimatedListPage() {
                                                         <Share2 className="w-4 h-4" />
                                                     </button>
                                                     <button 
-                                                        onClick={() => printSingleEstimate(est)}
+                                                        onClick={() => window.open(`/preview/${est.id}?type=Estimate&print=true`, '_blank')}
                                                         className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                                                         title="Print"
                                                     >
@@ -330,8 +314,8 @@ export default function EstimatedListPage() {
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                     <button 
-                                                        onClick={() => deleteEstimate(est.id)} 
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        onClick={() => setConfirmModal({ isOpen: true, id: est.id })} 
+                                                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -413,19 +397,19 @@ export default function EstimatedListPage() {
                 
                 {/* Print Padding */}
                 <div className="pb-24"></div> 
-            
-            {/* Hidden Print Component */}
-            <div style={{ height: 0, overflow: 'hidden' }}>
-                <div ref={printRef}>
-                    {printingEstimate && (
-                        <EstimatedPreview data={printingEstimate} showGst={printingEstimate.showGst} />
-                    )}
-                </div>
-            </div>
-
             </div>
         </div>
       </main>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
+        onConfirm={() => {
+            if (confirmModal.id) deleteEstimate(confirmModal.id);
+        }}
+        title="Delete Estimate"
+        message="Are you sure you want to permanently delete this estimate? This action cannot be undone."
+      />
     </div>
   );
 }

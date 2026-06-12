@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import { Menu, Save, Briefcase, MapPin, Phone, User, Mic, MicOff } from 'lucide-react';
+import { toast } from 'sonner';
 
 function CreateWorkContent() {
   const router = useRouter();
@@ -32,7 +33,7 @@ function CreateWorkContent() {
 
   const handleVoiceInput = (field) => {
     if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition is not supported in this browser. Please use Chrome.");
+        toast.error("Speech recognition is not supported in this browser. Please use Chrome.");
         return;
     }
 
@@ -88,7 +89,7 @@ function CreateWorkContent() {
 
   const handleSave = async () => {
     if (!formData.clientName.trim()) {
-        alert("Client Name is required");
+        toast.warning("Client Name is required");
         return;
     }
 
@@ -101,14 +102,16 @@ function CreateWorkContent() {
         });
 
         if (res.ok) {
-            setStatus('success');
+            toast.success("Work Assigned Successfully!");
             // Reset form or navigate
             setFormData({ clientName: '', clientPhone: '', clientAddress: '', instructions: '' });
-            alert("Work Assigned Successfully!");
-            router.push('/works');
+            setTimeout(() => {
+                setStatus('success');
+                router.push('/works');
+            }, 1000);
         } else {
             setStatus('error');
-            alert("Failed to assign work.");
+            toast.error("Failed to assign work.");
         }
 
     } catch (e) {
@@ -139,7 +142,7 @@ function CreateWorkContent() {
       />
       
       {/* Main Content */}
-      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-slate-50 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-2xl mx-auto">
             
             <div className="mb-6">
@@ -150,7 +153,7 @@ function CreateWorkContent() {
                 <p className="text-slate-500 mt-1">Fill in the details to assign a new task to your team.</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/40 border border-white/40 overflow-hidden">
                 <div className="p-6 space-y-6">
                     
 
@@ -236,13 +239,13 @@ function CreateWorkContent() {
                     </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end rounded-b-2xl">
                     <button 
                         onClick={handleSave}
                         disabled={status === 'loading'}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold rounded-lg shadow-lg shadow-blue-900/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all disabled:opacity-70 disabled:active:scale-100"
                     >
-                        <Save className="w-5 h-5" />
+                        {status === 'loading' ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5" />}
                         {status === 'loading' ? 'Assigning...' : 'Assign Work'}
                     </button>
                 </div>

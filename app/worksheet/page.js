@@ -3,15 +3,18 @@ import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Search, Calendar, FileDown, Plus, Save } from 'lucide-react';
-
 import Sidebar from '../components/Sidebar';
+import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 const WorksheetPage = () => {
     // Initial data structure
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
     
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
@@ -99,20 +102,22 @@ const WorksheetPage = () => {
             setRows(prev => [newRow, ...prev]);
         } catch (error) {
             console.error("Failed to add row:", error);
-            alert("Failed to add new row");
+            toast.error("Failed to add new row");
         }
     };
 
     const deleteRow = async (id) => {
-        if (confirm('Are you sure you want to delete this row?')) {
-            // Optimistic
-            setRows(prev => prev.filter(row => row.id !== id));
-            try {
-                await fetch(`/api/worksheets?id=${id}`, { method: 'DELETE' });
-            } catch (error) {
-                console.error("Failed to delete:", error);
-                alert("Failed to delete row");
-                fetchWorksheets(); // Revert
+        // Optimistic
+        const rowToDelete = rows.find(r => r.id === id);
+        setRows(prev => prev.filter(row => row.id !== id));
+        try {
+            await fetch(`/api/worksheets?id=${id}`, { method: 'DELETE' });
+            toast.success("Row deleted successfully");
+        } catch (error) {
+            console.error("Failed to delete:", error);
+            toast.error("Failed to delete row");
+            if (rowToDelete) {
+                setRows(prev => [...prev, rowToDelete]); // Revert
             }
         }
     };
@@ -129,6 +134,8 @@ const WorksheetPage = () => {
         // BETTER: The user might expect auto-save now that we are online.
         // BUT, to avoid regression, let's make the "Save Grid" button work by iterating.
         
+        if (isSaving) return;
+        setIsSaving(true);
         let success = true;
         for(let row of rows) {
              try {
@@ -143,8 +150,9 @@ const WorksheetPage = () => {
              }
         }
         
-        if(success) alert('Worksheet saved successfully!');
-        else alert('Some rows failed to save.');
+        if(success) toast.success('Worksheet saved successfully!');
+        else toast.error('Some rows failed to save.');
+        setIsSaving(false);
     };
 
     // PDF Export
@@ -178,7 +186,7 @@ const WorksheetPage = () => {
         }
 
         if (dataToExport.length === 0) {
-            alert('No data found for the selected range. Please ensure your rows have valid "Date" entries for Weekly/Monthly/Yearly exports.');
+            toast.warning('No data found for the selected range. Please ensure your rows have valid "Date" entries.');
             return;
         }
 
@@ -242,12 +250,13 @@ const WorksheetPage = () => {
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md p-1.5 rounded-xl border border-white/40 shadow-xl shadow-slate-200/40">
                             <button 
                                 onClick={saveData}
-                                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md transition-all border border-slate-200"
+                                disabled={isSaving}
+                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg transition-all shadow-lg shadow-blue-500/30 disabled:opacity-70"
                             >
-                                <Save className="w-3.5 h-3.5" />
+                                {isSaving ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                                 Save Grid
                             </button>
                             <button 
@@ -373,7 +382,7 @@ const WorksheetPage = () => {
                                     ))}
                                     <td className="p-2 text-center sticky right-0 bg-white group-hover:bg-blue-50/10 transition-colors shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.05)]">
                                         <button 
-                                            onClick={() => deleteRow(row.id)}
+                                            onClick={() => setConfirmModal({ isOpen: true, id: row.id })}
                                             className="text-slate-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                                             title="Delete Row"
                                         >
@@ -399,6 +408,17 @@ const WorksheetPage = () => {
                     )}
                 </div>
             </main>
+            
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false, id: null })}
+                onConfirm={() => {
+                    if (confirmModal.id) deleteRow(confirmModal.id);
+                    setConfirmModal({ isOpen: false, id: null });
+                }}
+                title="Delete Row"
+                message="Are you sure you want to permanently delete this row? This action cannot be undone."
+            />
         </div>
     );
 };

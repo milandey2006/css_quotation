@@ -31,9 +31,21 @@ export async function POST(request) {
   }
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const data = await db.select().from(punches).orderBy(desc(punches.timestamp));
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit');
+    
+    let query = db.select().from(punches).orderBy(desc(punches.timestamp));
+    
+    if (limit) {
+       query = query.limit(parseInt(limit));
+    } else {
+       // Default limit to prevent massive payloads on dashboard
+       query = query.limit(500); 
+    }
+
+    const data = await query;
     
     // Format for frontend compatibility
     const formatted = data.map(record => ({

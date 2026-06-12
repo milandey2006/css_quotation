@@ -2,17 +2,39 @@
 import { db } from '../../../db';
 import { quotations } from '../../../db/schema';
 import { NextResponse } from 'next/server';
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit');
 
-    let query = db.select().from(quotations).orderBy(desc(quotations.createdAt));
+    let query;
+    if (searchParams.get('basic') === 'true') {
+        query = db.select({
+            id: quotations.id,
+            publicId: quotations.publicId,
+            quotationNo: quotations.quotationNo,
+            date: quotations.date,
+            clientName: quotations.clientName,
+            totalAmount: quotations.totalAmount,
+            status: quotations.status,
+            createdAt: quotations.createdAt,
+            // Extract necessary fields for searching without loading the entire JSON payload
+            receiverPhone: sql`${quotations.data}->'receiver'->>'phone'`,
+            receiverCompany: sql`${quotations.data}->'receiver'->>'company'`,
+            receiverName: sql`${quotations.data}->'receiver'->>'name'`,
+            subject: sql`${quotations.data}->>'subject'`,
+            itemsText: sql`${quotations.data}->>'items'`,
+        }).from(quotations).orderBy(desc(quotations.createdAt));
+    } else {
+        query = db.select().from(quotations).orderBy(desc(quotations.createdAt));
+    }
 
     if (limit) {
         query = query.limit(parseInt(limit));
+    } else {
+        query = query.limit(searchParams.get('basic') === 'true' ? 1000 : 500);
     }
 
     const allQuotations = await query;

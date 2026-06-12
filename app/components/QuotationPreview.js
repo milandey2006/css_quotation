@@ -34,13 +34,13 @@ const QuotationPreview = ({ data }) => {
   const MAX_CHARS_PER_LINE = 46; 
   
   // 2. Balanced limits to prevent overflow while minimizing gaps
-  const PAGE_1_LIMIT = 22; 
-  const PAGE_N_LIMIT = 36;
-  const FOOTER_WEIGHT = 4;
-  const PROFORMA_FOOTER_WEIGHT = 10; // Approx weight for Totals + 5 lines of T&C
+  const PAGE_1_LIMIT = 29; 
+  const PAGE_N_LIMIT = 41;
+  const FOOTER_WEIGHT = 16;
+  const PROFORMA_FOOTER_WEIGHT = 16; // Approx weight for Totals + 5 lines of T&C
 
-  const getItemWeight = (description = '') => {
-    let desc = description || '';
+  const getItemWeight = (item) => {
+    let desc = item.description || '';
     // Convert block elements to newlines for accurate line counting
     desc = desc.replace(/<\/?(p|div|li|br)[^>]*>/gi, '\n');
     // Strip all remaining HTML tags
@@ -52,7 +52,12 @@ const QuotationPreview = ({ data }) => {
     const wrappingLines = Math.ceil((desc.length || 0) / MAX_CHARS_PER_LINE);
     
     // We take the larger of the two estimates
-    const totalLines = Math.max(rawLines, wrappingLines);
+    let totalLines = Math.max(rawLines, wrappingLines);
+    
+    // Account for image height which forces the row to be taller
+    if (safeData.showImages && safeData.type !== 'Proforma' && item.image) {
+        totalLines = Math.max(totalLines, 5); // Image roughly takes 5 lines of vertical space
+    }
     
     // Balanced multiplier to prevent overflow
     return 1 + (Math.max(0, totalLines - 1) * 0.75); 
@@ -68,7 +73,7 @@ const QuotationPreview = ({ data }) => {
 
   while (queue.length > 0) {
       let item = queue.shift();
-      const weight = getItemWeight(item.description);
+      const weight = getItemWeight(item);
       const remainingSpace = currentLimit - currentUsage;
 
       if (weight <= remainingSpace) { 
@@ -379,7 +384,7 @@ const QuotationPreview = ({ data }) => {
          </div>
 
          {!isProforma && pageIndex === pages.length - 2 && (
-            <div className={pages.length === 2 ? "mt-auto" : "mt-8"}>
+            <div className="mt-8">
                 <div className="flex justify-between items-end mb-8 mt-4">
                    <div className="w-1/2 pr-4">
                       <p className="text-gray-600 text-xs uppercase font-bold mb-1">Amount in Words:</p>

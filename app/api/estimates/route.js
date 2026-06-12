@@ -4,9 +4,35 @@ import { estimates } from '../../../db/schema';
 import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const result = await db.select().from(estimates).orderBy(desc(estimates.billDate));
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit');
+    
+    let query;
+    if (searchParams.get('basic') === 'true') {
+        query = db.select({
+            id: estimates.id,
+            publicId: estimates.publicId,
+            billNo: estimates.billNo,
+            billDate: estimates.billDate,
+            clientName: estimates.clientName,
+            totalAmount: estimates.totalAmount,
+            paidAmount: estimates.paidAmount,
+            status: estimates.status,
+            createdAt: estimates.createdAt
+        }).from(estimates).orderBy(desc(estimates.billDate));
+    } else {
+        query = db.select().from(estimates).orderBy(desc(estimates.billDate));
+    }
+    
+    if (limit) {
+        query = query.limit(parseInt(limit));
+    } else {
+        query = query.limit(searchParams.get('basic') === 'true' ? 1000 : 500);
+    }
+
+    const result = await query;
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching estimates:', error);

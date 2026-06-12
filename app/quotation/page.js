@@ -17,15 +17,18 @@ import {
   Copy,
   Share2
 } from 'lucide-react';
+import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function QuotationList() {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
   const router = useRouter(); 
 
@@ -36,7 +39,7 @@ export default function QuotationList() {
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/quotations');
+      const res = await fetch('/api/quotations?basic=true');
       const data = await res.json();
       setQuotations(data);
       setLoading(false);
@@ -61,7 +64,9 @@ export default function QuotationList() {
 
         if (!res.ok) {
             fetchDocuments();
-            alert('Failed to update status');
+            toast.error('Failed to update status');
+        } else {
+            toast.success('Status updated');
         }
       } catch (error) {
         console.error('Error updating status:', error);
@@ -70,29 +75,51 @@ export default function QuotationList() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this quotation?')) {
       try {
         const res = await fetch(`/api/quotations/${id}`, {
           method: 'DELETE',
         });
         if (res.ok) {
           fetchDocuments();
+          toast.success('Quotation deleted successfully');
         } else {
-          alert('Failed to delete');
+          toast.error('Failed to delete quotation');
         }
       } catch (error) {
         console.error('Error deleting:', error);
+        toast.error('Error deleting quotation');
       }
-    }
   };
 
-  const filteredQuotations = quotations.filter(q => 
-    (q.clientName && q.clientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.quotationNo && q.quotationNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.data?.receiver?.phone && q.data.receiver.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.data?.receiver?.company && q.data.receiver.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (q.data?.receiver?.name && q.data.receiver.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredQuotations = quotations.filter(q => {
+    const term = searchTerm.toLowerCase();
+    
+    if (
+        (q.clientName && q.clientName.toLowerCase().includes(term)) ||
+        (q.quotationNo && q.quotationNo.toLowerCase().includes(term)) ||
+        (q.receiverPhone && q.receiverPhone.toLowerCase().includes(term)) ||
+        (q.receiverCompany && q.receiverCompany.toLowerCase().includes(term)) ||
+        (q.receiverName && q.receiverName.toLowerCase().includes(term)) ||
+        (q.subject && q.subject.toLowerCase().includes(term)) ||
+        (q.data?.subject && q.data.subject.toLowerCase().includes(term))
+    ) {
+        return true;
+    }
+
+    let items = q.items || q.data?.items;
+    if (!items && q.itemsText) {
+        try { items = JSON.parse(q.itemsText); } catch(e) {}
+    }
+
+    if (items && Array.isArray(items)) {
+        return items.some(item => 
+            (item.make && String(item.make).toLowerCase().includes(term)) ||
+            (item.description && String(item.description).toLowerCase().includes(term))
+        );
+    }
+    
+    return false;
+  });
 
   // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -130,7 +157,7 @@ export default function QuotationList() {
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      <main className={`min-w-0 p-4 md:p-8 pt-20 md:pt-8 transition-all duration-300 min-h-screen ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <main className={`min-w-0 p-4 md:p-8 pt-20 md:pt-8 bg-gradient-to-br from-slate-50 to-slate-100 transition-all duration-300 min-h-screen ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-7xl mx-auto">
           
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -157,9 +184,9 @@ export default function QuotationList() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/40 border border-white/40 overflow-hidden">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-slate-50/50">
                   <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     <th className="px-6 py-4">Quotation No</th>
@@ -194,7 +221,9 @@ export default function QuotationList() {
                           <div className="font-medium text-slate-800">{q.clientName}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-slate-600 text-sm truncate max-w-[200px]" title={q.data?.subject}>{q.data?.subject || '-'}</div>
+                          <div className="text-slate-600 text-sm truncate max-w-[200px] cursor-pointer hover:whitespace-normal hover:overflow-visible hover:relative z-10 bg-transparent hover:bg-white hover:shadow-lg hover:p-2 rounded-lg transition-all" title={q.subject || q.data?.subject}>
+                            {q.subject || q.data?.subject || '-'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-slate-500 text-sm">
                           {new Date(q.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -266,14 +295,14 @@ export default function QuotationList() {
                               <button 
                                 onClick={() => {
                                     if (!q.publicId) {
-                                        alert('This quotation is from an older version and does not have a shareable link yet.\n\nPlease click "Edit" and then "Save" once to generate a link.');
+                                        toast.warning('This quotation is from an older version and does not have a shareable link yet. Please click "Edit" and then "Save" once to generate a link.', { duration: 5000 });
                                         return;
                                     }
                                     const slug = buildShareSlug(q.clientName, q.quotationNo, q.publicId);
                                     const shareUrl = `${window.location.origin}/quotation/${slug}`;
                                     navigator.clipboard.writeText(shareUrl)
-                                        .then(() => alert('Share link copied!\n\n' + shareUrl))
-                                        .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
+                                        .then(() => toast.success('Share link copied!'))
+                                        .catch(() => toast.error('Failed to copy link.'));
                                 }}
                                 className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                               >
@@ -283,7 +312,7 @@ export default function QuotationList() {
 
                             <ActionTooltip content="Delete">
                               <button 
-                                onClick={() => handleDelete(q.id)}
+                                onClick={() => setConfirmModal({ isOpen: true, id: q.id })}
                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -298,31 +327,81 @@ export default function QuotationList() {
               </table>
             </div>
             
-             <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="text-sm text-slate-500">
-                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuotations.length)} of {filteredQuotations.length} entries
+             <div className="p-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between bg-slate-50/50 gap-4 rounded-b-2xl">
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-slate-500">
+                    <div>
+                        Showing {filteredQuotations.length === 0 ? 0 : indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuotations.length)} of {filteredQuotations.length} entries
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="whitespace-nowrap font-medium text-slate-600">Rows per page:</span>
+                        <select 
+                            value={itemsPerPage} 
+                            onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                            className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer"
+                        >
+                            <option value={10}>10</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                            <option value={200}>200</option>
+                        </select>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1 max-w-full pb-2 md:pb-0">
                     <button 
                         onClick={goToPreviousPage} 
                         disabled={currentPage === 1}
-                        className="px-3 py-1 text-sm border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-white transition-colors"
+                        className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-white transition-colors shadow-sm font-medium"
                     >
-                        Previous
+                        Prev
                     </button>
-                    <span className="text-sm font-medium text-slate-700 bg-white px-3 py-1 rounded-lg border border-slate-200">
-                        Page {currentPage} of {totalPages || 1}
-                    </span>
+                    
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                        // Show few pages around current page to avoid clutter if many pages
+                        if (totalPages > 7) {
+                            if (page !== 1 && page !== totalPages && Math.abs(currentPage - page) > 1) {
+                                if (page === 2 || page === totalPages - 1) {
+                                    return <span key={page} className="px-2 text-slate-400">...</span>;
+                                }
+                                return null;
+                            }
+                        }
+
+                        return (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3.5 py-1.5 text-sm font-semibold border rounded-lg transition-all shadow-sm ${
+                                    currentPage === page 
+                                    ? 'bg-blue-600 text-white border-blue-600 scale-105' 
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                }`}
+                            >
+                                {page}
+                            </button>
+                        );
+                    })}
+
                     <button 
                         onClick={goToNextPage} 
                         disabled={currentPage === totalPages || totalPages === 0}
-                        className="px-3 py-1 text-sm border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-white transition-colors"
+                        className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg disabled:opacity-50 hover:bg-white transition-colors shadow-sm font-medium"
                     >
                         Next
                     </button>
                 </div>
             </div>
           </div>
+
+          <ConfirmModal 
+            isOpen={confirmModal.isOpen}
+            onClose={() => setConfirmModal({ isOpen: false, id: null })}
+            onConfirm={() => {
+                if (confirmModal.id) handleDelete(confirmModal.id);
+                setConfirmModal({ isOpen: false, id: null });
+            }}
+            title="Delete Quotation"
+            message="Are you sure you want to permanently delete this quotation? This action cannot be undone."
+          />
 
         </div>
       </main>

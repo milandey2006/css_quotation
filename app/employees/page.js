@@ -6,14 +6,18 @@ import Link from 'next/link';
 import { Menu, Plus, Users, Trash2, Edit, Save, X } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function EmployeesPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [editingId, setEditingId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
   const [formData, setFormData] = useState({
       name: '',
       designation: '',
@@ -63,6 +67,8 @@ export default function EmployeesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
     try {
         const url = editingId ? `/api/employees/${editingId}` : '/api/employees';
         const method = editingId ? 'PUT' : 'POST';
@@ -74,15 +80,18 @@ export default function EmployeesPage() {
         });
         
         if (res.ok) {
+            toast.success('Employee saved successfully');
             fetchEmployees();
             setView('list');
             resetForm();
         } else {
-            alert('Failed to save employee');
+            toast.error('Failed to save employee');
         }
     } catch (error) {
         console.error(error);
-        alert('Error saving employee');
+        toast.error('Error saving employee');
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -107,18 +116,17 @@ export default function EmployeesPage() {
   };
 
   const handleDelete = async (id) => {
-      if (!confirm('Are you sure you want to delete this employee?')) return;
-      
       try {
           const res = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
           if (res.ok) {
+              toast.success('Employee deleted');
               fetchEmployees();
           } else {
-              alert('Failed to delete');
+              toast.error('Failed to delete employee');
           }
       } catch (error) {
           console.error(error);
-          alert('Error deleting');
+          toast.error('Error deleting employee');
       }
   };
 
@@ -144,7 +152,7 @@ export default function EmployeesPage() {
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
       
-      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-slate-50 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-6xl mx-auto">
             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -173,13 +181,13 @@ export default function EmployeesPage() {
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                      </div>
                 ) : employees.length === 0 ? (
-                    <div className="bg-white p-12 rounded-xl border border-slate-200 text-center text-slate-500">
+                    <div className="bg-white p-12 rounded-2xl border border-white/40 shadow-xl shadow-slate-200/40 text-center text-slate-500">
                         <Users className="w-16 h-16 mx-auto text-slate-300 mb-4" />
                         <p className="text-lg font-medium text-slate-700">No Employees Found</p>
                         <p className="text-sm mt-1">Click "Add Employee" to create one.</p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/40 border border-white/40 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-slate-50 border-b border-slate-100">
@@ -216,8 +224,8 @@ export default function EmployeesPage() {
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleDelete(emp.id)}
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        onClick={() => setConfirmModal({ isOpen: true, id: emp.id })}
+                                                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -282,20 +290,31 @@ export default function EmployeesPage() {
                                 Cancel
                             </button>
                             <button 
-                                type="submit"
-                                className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-colors flex justify-center items-center gap-2"
-                            >
-                                <Save className="w-4 h-4" /> Save Employee
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
-        </div>
-      </main>
-    </div>
-  );
-}
+                                                        type="submit"
+                                                        disabled={isSaving}
+                                                        className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100 flex justify-center items-center gap-2"
+                                                    >
+                                                        {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />} 
+                                                        {isSaving ? 'Saving...' : 'Save Employee'}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    )}
+                                </div>
+                              </main>
+                              <ConfirmModal 
+                                isOpen={confirmModal.isOpen}
+                                onClose={() => setConfirmModal({ isOpen: false, id: null })}
+                                onConfirm={() => {
+                                    if (confirmModal.id) handleDelete(confirmModal.id);
+                                }}
+                                title="Delete Employee"
+                                message="Are you sure you want to permanently delete this employee? This action cannot be undone."
+                              />
+                            </div>
+                          );
+                        }
 
 const Input = ({ label, onChange, ...props }) => (
     <div>

@@ -7,6 +7,7 @@ import EstimatedPreview from '../../components/EstimatedPreview';
 import { Menu, Plus, Trash2, Printer, Save, ToggleLeft, ToggleRight, Share2 } from 'lucide-react';
 import { buildShareSlug } from '../../utils/shareSlug';
 import { useReactToPrint } from 'react-to-print';
+import { toast } from 'sonner';
 
 function CreateEstimateForm() {
   const router = useRouter();
@@ -121,11 +122,12 @@ function CreateEstimateForm() {
 
   const saveEstimate = async () => {
     try {
+      if (saveStatus === 'saving') return;
       setSaveStatus('saving');
       
-      // Calculate totals for quick list view
-      const subTotal = formData.items.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.rate) || 0)), 0);
-      const gstTotal = formData.items.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.rate) || 0) * ((item.gst || 0) / 100)), 0);
+      // Calculate totals for quick list view robustly
+      const subTotal = Math.round(formData.items.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.rate) || 0)), 0));
+      const gstTotal = Math.round(formData.items.reduce((acc, item) => acc + ((Number(item.qty) || 0) * (Number(item.rate) || 0) * ((Number(item.gst) || 0) / 100)), 0));
       const total = showGst ? (subTotal + gstTotal) : subTotal;
 
       const payload = {
@@ -161,6 +163,7 @@ function CreateEstimateForm() {
 
       if (res.ok) {
            setSaveStatus('saved');
+           toast.success('Estimate saved successfully!');
            setTimeout(() => setSaveStatus(''), 2000);
            const result = await res.json();
            if (!editId) {
@@ -173,25 +176,25 @@ function CreateEstimateForm() {
 
     } catch (err) {
       console.error("Save failed", err);
-      alert("Failed to save estimate");
+      toast.error("Failed to save estimate");
       setSaveStatus('');
     }
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans">
       {/* Mobile Menu Button */}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 bg-white rounded-lg shadow-md border border-slate-200 text-slate-600 hover:text-blue-600"
+          className="p-2 bg-white/80 backdrop-blur-md rounded-lg shadow-md border border-slate-200 text-slate-600 hover:text-blue-600"
         >
           <Menu className="w-6 h-6" />
         </button>
       </div>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out z-40 bg-white shadow-xl md:shadow-none w-64 border-r border-slate-200`}>
+      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-40 bg-white/80 backdrop-blur-xl shadow-2xl border-r border-white/20 w-64`}>
         <Sidebar activePage="Estimated" />
       </div>
       
@@ -227,43 +230,48 @@ function CreateEstimateForm() {
                 <div className="flex gap-2">
                   <button 
                       onClick={saveEstimate} 
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-900/20"
+                      disabled={saveStatus === 'saving'}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-600/30 hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:hover:scale-100 font-semibold"
                   >
-                      <Save className="w-4 h-4" />
+                      {saveStatus === 'saving' ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                          <Save className="w-4 h-4" />
+                      )}
                       <span className="text-sm font-medium">{saveStatus === 'saved' ? 'Saved!' : 'Save'}</span>
                   </button>
 
                   <button 
                       onClick={() => {
                           if (!formData.publicId) {
-                              alert('Please save the estimate first to generate a shareable link.');
+                              toast.info('Please save the estimate first to generate a shareable link.', { duration: 4000 });
                               return;
                           }
                           const slug = buildShareSlug(formData.billTo, formData.billNo, formData.publicId);
                           const shareUrl = `${window.location.origin}/estimate/${slug}`;
                           navigator.clipboard.writeText(shareUrl)
-                              .then(() => alert('Share link copied!\n\n' + shareUrl))
-                              .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
+                              .then(() => toast.success('Share link copied to clipboard!'))
+                              .catch(() => toast.error('Failed to copy link.'));
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-900/20"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 font-semibold"
                   >
                       <Share2 className="w-4 h-4" />
-                      <span className="text-sm font-medium hidden md:inline">Share</span>
+                      <span className="text-sm hidden md:inline">Share</span>
                   </button>
 
-                  <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors shadow-lg shadow-slate-900/20">
+                  <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-all shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-95 font-semibold">
                       <Printer className="w-4 h-4" />
-                      <span className="text-sm font-medium">Print / PDF</span>
+                      <span className="text-sm">Print</span>
                   </button>
                 </div>
             </div>
         </div>
 
         {/* Content Split: Form vs Preview */}
-        <div className="flex flex-col xl:flex-row gap-6 h-full overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-4 lg:gap-6 h-full overflow-hidden">
             
             {/* LEFT: Form */}
-            <div className="w-full xl:w-5/12 overflow-y-auto pr-2 pb-20 space-y-6">
+            <div className="w-full md:w-5/12 lg:w-4/12 overflow-y-auto pr-2 pb-20 space-y-6">
                 
                 {/* Bill Details */}
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -417,8 +425,8 @@ function CreateEstimateForm() {
             </div>
 
             {/* RIGHT: Preview */}
-            <div className="w-full xl:w-7/12 bg-slate-200/50 rounded-xl overflow-y-auto mb-20 md:mb-0 flex justify-center p-8 border border-slate-200/60 shadow-inner">
-                <div ref={componentRef} className="origin-top scale-[0.85] md:scale-100 transition-transform">
+            <div className="w-full md:w-7/12 lg:w-8/12 bg-slate-200/50 rounded-xl overflow-y-auto mb-20 md:mb-0 flex justify-center p-4 lg:p-8 border border-slate-200/60 shadow-inner">
+                <div ref={componentRef} className="origin-top scale-[0.45] sm:scale-[0.6] md:scale-[0.55] lg:scale-[0.7] xl:scale-[0.85] 2xl:scale-100 transition-transform">
                     <EstimatedPreview data={formData} showGst={showGst} />
                 </div>
             </div>

@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, MapPin, Phone, Briefcase, Navigation, Clock, CheckCircle, Edit, X, Copy } from 'lucide-react';
+import { Menu, MapPin, Phone, Briefcase, Navigation, Clock, CheckCircle, Edit, X, Copy, Trash2 } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function WorksPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -25,6 +27,7 @@ export default function WorksPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingWork, setEditingWork] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
   useEffect(() => {
     // Fetch Works
@@ -63,15 +66,16 @@ export default function WorksPage() {
               body: JSON.stringify({ userIds: userIds })
           });
           if (!res.ok) throw new Error('Failed to assign');
+          toast.success('Assignment updated');
       } catch (err) {
           console.error(err);
-          alert('Failed to assign user');
+          toast.error('Failed to assign user');
       }
   };
 
     const handlePunch = async (work, type) => {
       if (!navigator.geolocation) {
-          alert('Geolocation is not supported by your browser.');
+          toast.error('Geolocation is not supported by your browser.');
           return;
       }
 
@@ -134,34 +138,38 @@ export default function WorksPage() {
                       location: work.clientAddress || `${latitude}, ${longitude}`,
                       products: '',
                       report: 'Completed via App Punch Out',
-                      status: 'Completed',
-                      payment: '',
-                      remark: ''
+                      status: 'COMPLETED'
                   };
 
                   await fetch('/api/worksheets', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(worksheetPayload)
+                      body: JSON.stringify(worksheetPayload),
                   });
 
-                  // Mark Work as Completed (Removed from list view)
+                  // Mark Work as completed
                   await updateStatus(work.id, 'completed');
               }
-
-              alert(`Successfully Punched ${type === 'in' ? 'IN' : 'OUT'}`);
+              
+              toast.success(`Successfully Punched ${type.toUpperCase()}!`);
               setPunchStatus(prev => ({ ...prev, [work.id]: type }));
-          } catch (error) {
-              console.error(error);
-              alert('Failed to punch. Please try again.');
+              fetchDocuments();
+          } catch (err) {
+              console.error(err);
+              toast.error('Failed to save punch');
           } finally {
               setPunchLoading(prev => ({ ...prev, [work.id]: false }));
           }
         },
         (error) => {
-          console.error(error);
-          alert('Unable to retrieve location.');
+          toast.error('Unable to retrieve location. Please allow location access.');
           setPunchLoading(prev => ({ ...prev, [work.id]: false }));
+          console.error(error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
   };
@@ -185,23 +193,23 @@ export default function WorksPage() {
             body: JSON.stringify({ status: newStatus })
         });
         if (!res.ok) throw new Error('Failed to update');
+        toast.success("Status updated");
     } catch (err) {
         console.error(err);
-        alert("Failed to update status");
+        toast.error("Failed to update status");
     }
   };
 
   const deleteWork = async (id) => {
-      if(!confirm("Are you sure you want to delete this work?")) return;
-
       setWorks(prev => prev.filter(w => w.id !== id)); // Optimistic delete
 
       try {
           const res = await fetch(`/api/works/${id}`, { method: 'DELETE' });
           if (!res.ok) throw new Error('Failed to delete');
+          toast.success("Work deleted");
       } catch (err) {
           console.error(err);
-          alert("Failed to delete work");
+          toast.error("Failed to delete work");
           // Could reload here
       }
   }
@@ -238,9 +246,10 @@ export default function WorksPage() {
           setWorks(prev => prev.map(w => w.id === editingWork.id ? { ...w, ...editingWork } : w));
           setIsEditModalOpen(false);
           setEditingWork(null);
+          toast.success('Changes saved');
       } catch (err) {
           console.error(err);
-          alert('Failed to save changes');
+          toast.error('Failed to save changes');
       } finally {
           setIsSaving(false);
       }
@@ -305,7 +314,7 @@ export default function WorksPage() {
       />
       
       {/* Main Content */}
-      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-slate-50 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-5xl mx-auto">
             
             <div className="mb-8 ">
@@ -348,7 +357,7 @@ export default function WorksPage() {
                 <div className="flex flex-col gap-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {currentWorks.map((work) => (
-                            <div key={work.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow relative group">
+                            <div key={work.id} className="bg-white/80 backdrop-blur-md rounded-xl shadow-xl shadow-slate-200/40 border border-white/40 overflow-hidden hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-300 relative group">
                                 
                                 {/* Admin Actions */}
                                 {isAdmin && (
@@ -368,11 +377,11 @@ export default function WorksPage() {
                                             <Edit className="w-3.5 h-3.5" />
                                         </button>
                                         <button 
-                                            onClick={() => deleteWork(work.id)}
+                                            onClick={() => setConfirmModal({ isOpen: true, id: work.id })}
                                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all bg-white shadow-sm"
                                             title="Delete Work"
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 )}
@@ -597,14 +606,27 @@ export default function WorksPage() {
                       <button 
                           onClick={handleSaveEdit}
                           disabled={isSaving}
-                          className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md shadow-blue-200 transition-all flex items-center gap-2"
+                          className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70"
                       >
+                          {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
                           {isSaving ? 'Saving...' : 'Save Changes'}
                       </button>
                   </div>
               </div>
           </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
+        onConfirm={() => {
+            if (confirmModal.id) deleteWork(confirmModal.id);
+            setConfirmModal({ isOpen: false, id: null });
+        }}
+        title="Delete Work"
+        message="Are you sure you want to permanently delete this assigned work? This action cannot be undone."
+      />
+
     </div>
   );
 }

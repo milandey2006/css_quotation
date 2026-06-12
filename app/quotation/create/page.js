@@ -267,8 +267,20 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
       }
   };
 
-  const [sidebarWidth, setSidebarWidth] = useState(600); 
+  const [sidebarWidth, setSidebarWidth] = useState(400); 
   const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth >= 1280) {
+        setSidebarWidth(600);
+      } else if (window.innerWidth >= 1024) {
+        setSidebarWidth(450);
+      } else if (window.innerWidth >= 768) {
+        setSidebarWidth(350);
+      }
+    }
+  }, []);
 
   const startResizing = React.useCallback((mouseDownEvent) => {
     setIsResizing(true);
@@ -279,11 +291,11 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
   }, []);
 
   const resize = React.useCallback(
-    (mouseMoveEvent) => {
+    (e) => {
       if (isResizing) {
-        const newWidth = mouseMoveEvent.clientX;
-        if (newWidth > 300 && newWidth < window.innerWidth - 400) {
-            setSidebarWidth(newWidth);
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        if (clientX > 250 && clientX < window.innerWidth - 300) {
+            setSidebarWidth(clientX);
         }
       }
     },
@@ -293,9 +305,13 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
   useEffect(() => {
     window.addEventListener("mousemove", resize);
     window.addEventListener("mouseup", stopResizing);
+    window.addEventListener("touchmove", resize, { passive: false });
+    window.addEventListener("touchend", stopResizing);
     return () => {
       window.removeEventListener("mousemove", resize);
       window.removeEventListener("mouseup", stopResizing);
+      window.removeEventListener("touchmove", resize);
+      window.removeEventListener("touchend", stopResizing);
     };
   }, [resize, stopResizing]);
 
@@ -305,7 +321,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden select-none print:min-h-0 print:h-auto print:overflow-visible print:block print:bg-white">
+    <main className="min-h-screen bg-gray-50 flex flex-col md:flex-row md:h-screen md:overflow-hidden select-none print:min-h-0 print:h-auto print:overflow-visible print:block print:bg-white">
       <div className="fixed top-4 left-4 z-50 flex gap-2 print:hidden">
           <button 
             onClick={() => router.push('/quotation')}
@@ -318,8 +334,8 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
       </div>
 
       <div 
-        className="w-full lg:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden pt-16 lg:pt-0"
-        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? sidebarWidth : '100%' }}
+        className="w-full md:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden pt-16 md:pt-0"
+        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? sidebarWidth : '100%' }}
       >
         <QuotationForm 
           data={data} 
@@ -336,14 +352,15 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
       </div>
 
        <div
-        className="hidden lg:flex w-4 h-full cursor-col-resize hover:bg-blue-500/10 bg-gray-50 transition-colors z-50 items-center justify-center group flex-shrink-0 -ml-2"
+        className="hidden md:flex w-4 h-full cursor-col-resize hover:bg-blue-500/10 bg-gray-50 transition-colors z-50 items-center justify-center group flex-shrink-0 -ml-2 touch-none"
         onMouseDown={startResizing}
+        onTouchStart={startResizing}
       >
            <div className="w-1 h-12 bg-gray-300 group-hover:bg-blue-500 rounded-full transition-all"></div>
       </div>
 
       <div className="flex-1 h-full overflow-y-auto overflow-x-auto bg-gray-200 p-4 md:p-8 flex justify-center relative print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block print:static pt-20 md:pt-8">
-         <div className="transform scale-[0.45] sm:scale-[0.6] md:scale-[0.75] lg:scale-100 origin-top transition-transform duration-300 ease-out">
+         <div className="transform scale-[0.45] sm:scale-[0.6] md:scale-[0.55] lg:scale-[0.65] xl:scale-[0.85] 2xl:scale-100 origin-top transition-transform duration-300 ease-out">
             <QuotationPreview data={data} />
          </div>
       </div>

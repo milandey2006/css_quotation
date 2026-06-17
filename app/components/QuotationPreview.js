@@ -30,14 +30,17 @@ const QuotationPreview = ({ data }) => {
 
   // --- STRICT Pagination Logic ---
   
-  // 1. We assume text wraps very quickly (every 46 chars)
+  // Characters per line for wrapping estimation
   const MAX_CHARS_PER_LINE = 46; 
   
-  // 2. Balanced limits to prevent overflow while minimizing gaps
-  const PAGE_1_LIMIT = 29; 
-  const PAGE_N_LIMIT = 41;
-  const FOOTER_WEIGHT = 16;
-  const PROFORMA_FOOTER_WEIGHT = 16; // Approx weight for Totals + 5 lines of T&C
+  // Calibrated from browser inspection of actual A4 rendered pages:
+  // Page 1: header ~310px, fits ~7 image rows or ~22 simple rows
+  // Page N: header ~82px, fits ~11 image rows or ~30 simple rows  
+  // Image row (max-h-16=64px) ≈ 2x a simple row (~32px)
+  const PAGE_1_LIMIT = 20; 
+  const PAGE_N_LIMIT = 32;
+  const FOOTER_WEIGHT = 4; // Totals section (Sub Total + GST + Grand Total) ≈ 4 rows
+  const PROFORMA_FOOTER_WEIGHT = 8; // Totals + T&C on proforma
 
   const getItemWeight = (item) => {
     let desc = item.description || '';
@@ -52,15 +55,15 @@ const QuotationPreview = ({ data }) => {
     const wrappingLines = Math.ceil((desc.length || 0) / MAX_CHARS_PER_LINE);
     
     // We take the larger of the two estimates
-    let totalLines = Math.max(rawLines, wrappingLines);
+    let totalLines = Math.max(rawLines, wrappingLines, 1);
     
-    // Account for image height which forces the row to be taller
+    // Image thumbnails (max-h-16 = 64px) take roughly 2x a normal row height
     if (safeData.showImages && safeData.type !== 'Proforma' && item.image) {
-        totalLines = Math.max(totalLines, 5); // Image roughly takes 5 lines of vertical space
+        totalLines = Math.max(totalLines, 2);
     }
     
-    // Balanced multiplier to prevent overflow
-    return 1 + (Math.max(0, totalLines - 1) * 0.75); 
+    // 1 unit per row + 0.6 per additional line of text
+    return 1 + (Math.max(0, totalLines - 1) * 0.6); 
   };
 
   const pages = [];
@@ -86,7 +89,7 @@ const QuotationPreview = ({ data }) => {
 
           // Only attempt to split if it's plaintext (no HTML tags) to prevent corrupting rich text DOM
           if (!hasHtmlTags && remainingSpace > 2.5) { 
-              const availableLines = Math.floor((remainingSpace - 1) / 0.45); 
+              const availableLines = Math.floor((remainingSpace - 1) / 0.7); 
               if (availableLines >= 1) { 
                   const approxChars = Math.floor(availableLines * MAX_CHARS_PER_LINE);
                   
@@ -134,8 +137,13 @@ const QuotationPreview = ({ data }) => {
           pages.push([]);
       }
   } else {
-      // Standard Quotation logic
-      if (currentUsage > (currentLimit - FOOTER_WEIGHT)) pages.push([]); 
+      // Standard Quotation: check if the last item page has room for the totals section
+      const lastPageLimit = pages.length === 0 ? PAGE_1_LIMIT : currentLimit;
+      if (currentUsage > (lastPageLimit - FOOTER_WEIGHT)) {
+          // Not enough room for totals on the current page, push totals to a new page
+          pages.push([]); 
+      }
+      // Always add the final page for T&C, brands, signature footer
       pages.push([]); 
   }
   

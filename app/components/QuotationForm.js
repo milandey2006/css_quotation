@@ -73,11 +73,12 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    
-    if (active.id !== over.id) {
-        const oldIndex = parseInt(active.id);
-        const newIndex = parseInt(over.id);
-        
+
+    if (over && active.id !== over.id) {
+        const oldIndex = data.items.findIndex((item) => item.id === active.id);
+        const newIndex = data.items.findIndex((item) => item.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return;
+
         const newItems = arrayMove(data.items, oldIndex, newIndex);
         if(onReorderItems) onReorderItems(newItems);
     }
@@ -332,12 +333,12 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-             <SortableContext 
-                items={data.items.map((_, i) => `${i}`)}
+             <SortableContext
+                items={data.items.map((item) => item.id)}
                 strategy={verticalListSortingStrategy}
              >
                 {data.items.map((item, index) => (
-                    <SortableItem key={index} id={`${index}`}>
+                    <SortableItem key={item.id} id={item.id}>
                          {/* Item Actions */}
                           <button
                              type="button" 

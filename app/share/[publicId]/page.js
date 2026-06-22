@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import EstimatedPreview from '../../components/EstimatedPreview';
 import QuotationPreview from '../../components/QuotationPreview';
 
@@ -44,28 +44,38 @@ export default function PublicSharePage({ params }) {
     if (publicId) fetchData();
   }, [publicId]);
 
-  // Responsive Scaling Logic
-  const [scale, setScale] = useState(1);
+  // Responsive Scaling Logic.
+  // Measures the actual rendered (native) size of the document and computes a scale to fit
+  // the viewport, then sets an explicit pixel width/height on an outer wrapper so the box's
+  // layout footprint matches what's visually drawn. Relying on flex "shrink-to-fit" sizing
+  // instead (the previous approach) is fragile across browsers and leaves content overflowing
+  // sideways on phones.
+  const scaleTargetRef = useRef(null);
+  const [scaledSize, setScaledSize] = useState(null);
 
   useEffect(() => {
-    const handleResize = () => {
-      // 210mm is approx 794px at 96 DPI, simplified to 800px base width for calculation
-      const baseWidth = 800; // The width of the A4 container
-      const windowWidth = window.innerWidth;
-      
-      if (windowWidth < baseWidth) {
-          // Add some padding (20px)
-          const newScale = (windowWidth - 20) / baseWidth;
-          setScale(newScale);
-      } else {
-          setScale(1);
-      }
+    if (!docData) return;
+
+    const recompute = () => {
+      const el = scaleTargetRef.current;
+      if (!el) return;
+      const nativeWidth = el.scrollWidth;
+      const nativeHeight = el.scrollHeight;
+      const maxWidth = window.innerWidth - 20;
+      const newScale = nativeWidth > maxWidth ? maxWidth / nativeWidth : 1;
+      setScaledSize({
+        scale: newScale,
+        width: nativeWidth * newScale,
+        height: nativeHeight * newScale,
+      });
     };
 
-    handleResize(); // Initial calculation
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    recompute();
+    window.addEventListener('resize', recompute);
+    return () => window.removeEventListener('resize', recompute);
+  }, [docData]);
+
+  const scale = scaledSize?.scale ?? 1;
 
   if (loading) return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -99,18 +109,28 @@ export default function PublicSharePage({ params }) {
        </div>
 
        {/* Scaled Preview Container */}
-       <div 
-          className="shadow-2xl bg-white origin-top transition-transform duration-200 print-container"
-          style={{ 
-              transform: `scale(${scale})`,
-              marginBottom: `-${(1 - scale) * 1123}px` // Compensate for vertical space lost by scaling (approx A4 height)
+       <div
+          className="print-container"
+          style={{
+              width: scaledSize ? `${scaledSize.width}px` : 'auto',
+              height: scaledSize ? `${scaledSize.height}px` : 'auto',
+              overflow: 'hidden',
           }}
        >
-          {docType === 'Estimate' ? (
-              <EstimatedPreview data={docData} showGst={docData.showGst} />
-          ) : (
-              <QuotationPreview data={docData} />
-          )}
+          <div
+             ref={scaleTargetRef}
+             className="shadow-2xl bg-white print-content transition-transform duration-200"
+             style={{
+                 transform: `scale(${scale})`,
+                 transformOrigin: 'top left',
+             }}
+          >
+             {docType === 'Estimate' ? (
+                 <EstimatedPreview data={docData} showGst={docData.showGst} />
+             ) : (
+                 <QuotationPreview data={docData} />
+             )}
+          </div>
        </div>
 
        <div className="mt-8 text-slate-400 text-xs text-center no-print w-full px-4">
@@ -123,10 +143,14 @@ export default function PublicSharePage({ params }) {
           @media print {
             .no-print { display: none !important; }
             body { background: white; }
-            /* Reset scaling for print */
+            /* Reset scaling for print -- print at native size, not the screen-fit scale */
             .print-container {
+                width: auto !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            .print-content {
                 transform: none !important;
-                margin-bottom: 0 !important;
                 box-shadow: none !important;
             }
           }

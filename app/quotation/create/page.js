@@ -7,6 +7,13 @@ import QuotationForm from "../../components/QuotationForm";
 import QuotationPreview from "../../components/QuotationPreview";
 import { buildShareSlug } from '../../utils/shareSlug';
 
+// Items need a stable id (independent of array position) so React and dnd-kit can tell items
+// apart correctly during drag-reorder -- keying by array index made the rich text editor and
+// other fields show stale content after a drag, since React reused component instances for the
+// same index instead of moving them with their data.
+const withItemIds = (items) =>
+  (items || []).map((item) => (item.id ? item : { ...item, id: crypto.randomUUID() }));
+
 function CreateQuotationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,16 +48,16 @@ function CreateQuotationContent() {
       address: "",
       phone: ""
     },
-    items: [
+    items: withItemIds([
       {
         description: "",
-        image: "", 
+        image: "",
         make: "",
         qty: 1,
         price: 0,
         gst: 18
       }
-    ],
+    ]),
     terms: `Device warranty :- Five year warranty all /5MP cameras and NVR
 Warranty: Hard Disk warranty for Two years, All POE switch warranty one years from date of supply subject to manufacturing defects only.
 Cable :- Cable will be On Actual, it will be not in warranty in case of Damage. It's based on final installation it could be more or less than the estimated cable length
@@ -77,11 +84,12 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
             })
             .then(quotation => {
                 if (quotation.data) {
-                    const loadedData = { 
-                        ...quotation.data, 
-                        type: 'Quotation', 
+                    const loadedData = {
+                        ...quotation.data,
+                        type: 'Quotation',
                         fixedType: true,
-                        publicId: quotation.publicId // Capture Public ID
+                        publicId: quotation.publicId, // Capture Public ID
+                        items: withItemIds(quotation.data.items)
                     };
                     
                     if (cloneId) {
@@ -188,7 +196,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
   const addItem = () => {
     setData(prev => ({
       ...prev,
-      items: [...prev.items, { description: "", make: "", qty: 1, price: 0, gst: 18, image: "", hsn: "" }]
+      items: [...prev.items, { id: crypto.randomUUID(), description: "", make: "", qty: 1, price: 0, gst: 18, image: "", hsn: "" }]
     }));
   };
 

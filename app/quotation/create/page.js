@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import QuotationForm from "../../components/QuotationForm";
 import QuotationPreview from "../../components/QuotationPreview";
 import { buildShareSlug } from '../../utils/shareSlug';
@@ -260,7 +261,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
       const shareUrl = `${window.location.origin}/quotation/${slug}`;
       try {
           await navigator.clipboard.writeText(shareUrl);
-          alert('Share link copied!\n\n' + shareUrl);
+          toast.success('Share link copied! Anyone with this link can view it — no login needed.');
       } catch (err) {
           console.error('Failed to copy: ', err);
           alert('Failed to copy link. Copy manually:\n' + shareUrl);

@@ -5,7 +5,12 @@ const isPublicRoute = createRouteMatcher([
     '/sign-up(.*)',
     '/api/webhooks(.*)',
     '/share(.*)',
-    '/api/public(.*)'
+    '/api/public(.*)',
+    // Pretty public-viewer URLs for shared documents, e.g. /quotation/dura-exports-css-jun-2026-261-a8f3k9b2.
+    // Must exclude the "create" and list pages of each section, which stay behind auth.
+    /^\/quotation\/(?!create\b)[^/]+\/?$/,
+    /^\/proforma\/(?!create\b)[^/]+\/?$/,
+    /^\/estimate\/(?!create\b)[^/]+\/?$/,
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

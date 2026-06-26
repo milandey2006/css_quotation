@@ -116,7 +116,7 @@ const QuotationPreview = ({ data }) => {
   );
 
   const renderLastPageFooter = () => (
-    <div className="flex flex-col h-full justify-start">
+    <div className="flex flex-col">
       <div className="pt-4">
         <div className="flex justify-between items-start gap-8 mb-6">
           <div className="flex-1 text-xs text-gray-700 leading-relaxed">
@@ -397,6 +397,7 @@ const QuotationPreview = ({ data }) => {
   const itemsWithSr = safeData.items.map((item, i) => ({ ...item, _sr: i + 1 }));
 
   const [pages, setPages] = useState(null); // null while measuring
+  const [footerPlacement, setFooterPlacement] = useState('split'); // 'same' | 'new' | 'split'
 
   useLayoutEffect(() => {
     const innerWrapperHeight = rulerInnerRef.current?.getBoundingClientRect().height || 0;
@@ -407,8 +408,12 @@ const QuotationPreview = ({ data }) => {
     const proformaFooterHeight = proformaFooterRef.current?.getBoundingClientRect().height || 0;
 
     const tableChromeHeight = 40; // thead + table borders/margins overhead, roughly constant
-    const page1Available = innerWrapperHeight - header1Height - tableChromeHeight;
-    const pageNAvailable = innerWrapperHeight - headerNHeight - tableChromeHeight;
+    // Browsers commonly impose their own default print margins on top of our `@page { margin: 0 }`
+    // unless the user explicitly picks "Margins: None" in the print dialog. Reserve a small buffer
+    // so that doesn't silently push the last bit of each page onto an extra, mostly-blank page.
+    const PRINT_SAFETY_BUFFER = 32;
+    const page1Available = innerWrapperHeight - header1Height - tableChromeHeight - PRINT_SAFETY_BUFFER;
+    const pageNAvailable = innerWrapperHeight - headerNHeight - tableChromeHeight - PRINT_SAFETY_BUFFER;
 
     // Average px height of one wrapped line of description text, derived from measured rows,
     // used only to pick a cut point when splitting an oversized single item across pages.
@@ -471,14 +476,35 @@ const QuotationPreview = ({ data }) => {
     if (currentPage.length > 0) result.push(currentPage);
     else if (result.length === 0) result.push([]);
 
+    // Decide where the totals/words block and the closing terms+brands footer go. Previously a
+    // dedicated trailing page was always added for the footer regardless of how little content it
+    // had, which routinely produced an near-empty extra page at the end of short quotations.
+    let footerPlacementResult = 'split';
     if (isProforma) {
       if (currentUsed > (currentLimit - proformaFooterHeight)) result.push([]);
     } else {
+      const FOOTER_GAP = 32; // px, matches the `mt-8` margin between the items table and totals
+      const combinedFooterHeight = totalsWordsHeight + FOOTER_GAP + lastFooterHeight;
       const lastPageLimit = result.length === 0 ? page1Available : currentLimit;
-      if (currentUsed > (lastPageLimit - totalsWordsHeight)) result.push([]);
-      result.push([]);
+      const remainingOnLastPage = lastPageLimit - currentUsed;
+
+      if (remainingOnLastPage >= combinedFooterHeight) {
+        // Totals + terms + brands all fit right after the items, on the same page.
+        footerPlacementResult = 'same';
+      } else if (combinedFooterHeight <= pageNAvailable) {
+        // Doesn't fit with the items, but fits together on one fresh page.
+        footerPlacementResult = 'new';
+        result.push([]);
+      } else {
+        // Too tall for one page even on its own -- fall back to splitting totals and the
+        // terms+brands footer across two pages, same as before.
+        footerPlacementResult = 'split';
+        if (currentUsed > (lastPageLimit - totalsWordsHeight)) result.push([]);
+        result.push([]);
+      }
     }
 
+    setFooterPlacement(footerPlacementResult);
     setPages(result);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(safeData)]);
@@ -491,7 +517,7 @@ const QuotationPreview = ({ data }) => {
       <div
         key={pageIndex}
         data-pdf-page="true"
-        className={`bg-white shadow-2xl mx-auto w-[210mm] h-[297mm] p-10 relative text-sm sm:text-base text-gray-800 mb-8 overflow-hidden flex flex-col print:shadow-none print:mb-0 print:w-full print:h-[297mm] print:overflow-hidden print:mx-0 ${pageIndex < pageCount - 1 ? 'print:break-after-page' : ''}`}
+        className={`bg-white shadow-2xl mx-auto w-[210mm] h-[297mm] p-10 relative text-sm text-gray-800 mb-8 overflow-hidden flex flex-col print:shadow-none print:mb-0 print:w-full print:h-[297mm] print:overflow-hidden print:mx-0 ${pageIndex < pageCount - 1 ? 'print:break-after-page' : ''}`}
         style={{ fontFamily: 'Inter, sans-serif' }}
       >
         {/* Watermark */}
@@ -534,11 +560,17 @@ const QuotationPreview = ({ data }) => {
             {showInlineTotals && renderProformaInlineFooter()}
           </div>
 
-          {!isProforma && pageIndex === pageCount - 2 && (
+          {!isProforma && footerPlacement === 'split' && pageIndex === pageCount - 2 && (
             <div className="mt-8">{renderTotalsWordsBlock()}</div>
           )}
+          {!isProforma && footerPlacement === 'split' && pageIndex === pageCount - 1 && renderLastPageFooter()}
 
-          {!isProforma && pageIndex === pageCount - 1 && renderLastPageFooter()}
+          {!isProforma && footerPlacement !== 'split' && pageIndex === pageCount - 1 && (
+            <>
+              <div className="mt-8">{renderTotalsWordsBlock()}</div>
+              {renderLastPageFooter()}
+            </>
+          )}
         </div>
       </div>
     );

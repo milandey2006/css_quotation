@@ -186,8 +186,9 @@ Damage And Repair Not Cover In Warranty`
       }
   };
 
-  const [sidebarWidth, setSidebarWidth] = useState(400); 
+  const [sidebarWidth, setSidebarWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
+  const [mobileView, setMobileView] = useState('edit'); // 'edit' | 'preview' -- mobile-only tab toggle
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -242,7 +243,7 @@ Damage And Repair Not Cover In Warranty`
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col md:flex-row md:h-screen md:overflow-hidden select-none print:min-h-0 print:h-auto print:overflow-visible print:block print:bg-white">
       <div className="fixed top-4 left-4 z-50 flex gap-2 print:hidden">
-          <button 
+          <button
             onClick={() => router.push('/proforma')}
             className="p-2 bg-white text-slate-600 rounded-lg shadow-md border border-slate-200 hover:text-blue-600 hover:border-blue-400 transition-all flex items-center gap-2"
             title="Back to List"
@@ -252,12 +253,28 @@ Damage And Repair Not Cover In Warranty`
           </button>
       </div>
 
-      <div 
-        className="w-full md:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden pt-16 md:pt-0"
+      {/* Mobile-only Edit/Preview toggle -- desktop always shows both panes side by side */}
+      <div className="md:hidden fixed top-4 right-4 z-50 flex bg-white rounded-lg shadow-md border border-slate-200 p-1 gap-1 print:hidden">
+          <button
+            onClick={() => setMobileView('edit')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${mobileView === 'edit' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => setMobileView('preview')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${mobileView === 'preview' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
+          >
+            Preview
+          </button>
+      </div>
+
+      <div
+        className={`w-full md:h-full overflow-y-auto flex-shrink-0 relative bg-white border-r border-gray-200 z-10 print:hidden pt-16 md:pt-0 ${mobileView === 'edit' ? 'block' : 'hidden'} md:block`}
         style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? sidebarWidth : '100%' }}
       >
-        <QuotationForm 
-          data={data} 
+        <QuotationForm
+          data={data}
           onChange={handleDeepChange}
           onAddItem={addItem}
           onRemoveItem={removeItem}
@@ -278,8 +295,8 @@ Damage And Repair Not Cover In Warranty`
            <div className="w-1 h-12 bg-gray-300 group-hover:bg-blue-500 rounded-full transition-all"></div>
       </div>
 
-      <div className="flex-1 h-full overflow-y-auto overflow-x-auto bg-gray-200 p-4 md:p-8 flex justify-center relative print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block print:static pt-20 md:pt-8">
-         <div className="transform scale-[0.45] sm:scale-[0.6] md:scale-[0.55] lg:scale-[0.65] xl:scale-[0.85] 2xl:scale-100 origin-top transition-transform duration-300 ease-out">
+      <div className={`flex-1 h-full overflow-y-auto overflow-x-auto bg-gray-200 p-4 md:p-8 justify-center relative print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block print:static pt-20 md:pt-8 ${mobileView === 'preview' ? 'flex' : 'hidden'} md:flex`}>
+         <div className="transform md:scale-[0.55] lg:scale-[0.65] xl:scale-[0.85] 2xl:scale-100 origin-top transition-transform duration-300 ease-out">
             <QuotationPreview data={data} />
          </div>
       </div>

@@ -2,46 +2,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Settings, 
-  User, 
-  LogOut,
-  Bell,
-  PieChart,
-  Table,
-  Clock,
-  Briefcase,
-  MapPin
-} from 'lucide-react';
-
 import { UserButton, useUser } from "@clerk/nextjs";
+import { getNavItemsForRole } from '../lib/navItems';
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, toggleSidebar }) => {
   const pathname = usePathname();
   const { user, isLoaded } = useUser();
   const role = user?.publicMetadata?.role;
-  // Define menu items with visibility logic
-  const allMenuItems = [
-    { name: 'Dashboard',        icon: LayoutDashboard, href: '/',           roles: ['admin', 'super-admin'] },
-    { name: 'Quotation',        icon: FileText,        href: '/quotation',  roles: ['admin', 'super-admin'] },
-    { name: 'Proforma Invoice', icon: FileText,        href: '/proforma',   roles: ['admin', 'super-admin'] },
-    { name: 'Estimated',        icon: FileText,        href: '/estimated',  roles: ['admin', 'super-admin'] },
-    { name: 'Worksheet',        icon: Table,           href: '/worksheet',  roles: ['admin', 'super-admin'] },
-    { name: 'Salary Slips',     icon: FileText,        href: '/salary',     roles: ['admin', 'super-admin'] },
-    { name: 'Employees',        icon: User,            href: '/employees',  roles: ['admin', 'super-admin'] },
-    { name: 'Attendance',       icon: Clock,           href: '/attendance', roles: ['super-admin'] },           // admin excluded
-    { name: 'Office Attendance',icon: Clock,           href: '/punch',      roles: ['user'] },
-    { name: 'Work List',        icon: Briefcase,       href: '/works',      roles: ['admin', 'super-admin', 'user'] },
-    { name: 'Assign Work',      icon: User,            href: '/works/create', roles: ['admin', 'super-admin'] },
-    { name: 'Site Visits',      icon: MapPin,          href: '/site-visits',roles: ['admin', 'super-admin'] },
-    { name: 'Settings',         icon: Settings,        href: '/settings',   roles: ['super-admin'] },           // admin excluded
-  ];
-
-  // If role is undefined or null, default to 'user' or handle appropriately
+  const menuItems = getNavItemsForRole(role);
   const currentRole = role || 'user';
-  const menuItems = allMenuItems.filter(item => item.roles.includes(currentRole));
 
   return (
     <>

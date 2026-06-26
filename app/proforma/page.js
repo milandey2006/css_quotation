@@ -2,11 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Sidebar from '../components/Sidebar';
+import AppShell from '../components/ui/AppShell';
+import PageHeader from '../components/ui/PageHeader';
+import ResponsiveTable from '../components/ui/ResponsiveTable';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Card from '../components/ui/Card';
 import { buildShareSlug } from '../utils/shareSlug';
-import { 
-  Search, 
-  Filter, 
+import {
   Plus,
   FileText,
   Eye,
@@ -21,8 +24,6 @@ export default function ProformaList() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const router = useRouter(); 
 
@@ -123,218 +124,149 @@ export default function ProformaList() {
     return false;
   });
 
+  const columns = [
+    {
+      key: 'quotationNo', label: 'PI No', mobile: 'title',
+      render: (q) => <span className="font-medium text-slate-700">{q.quotationNo}</span>,
+    },
+    {
+      key: 'clientName', label: 'Client', mobile: 'subtitle',
+      render: (q) => <div className="font-medium text-slate-800">{q.clientName}</div>,
+    },
+    {
+      key: 'subject', label: 'Subject', mobile: 'meta',
+      render: (q) => (
+        <div className="text-slate-600 text-sm truncate max-w-[200px] cursor-pointer hover:whitespace-normal hover:overflow-visible hover:relative z-10 bg-transparent hover:bg-white hover:shadow-lg hover:p-2 rounded-lg transition-all" title={q.subject || q.data?.subject}>
+          {q.subject || q.data?.subject || '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'date', label: 'Date', mobile: 'meta',
+      render: (q) => new Date(q.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+    },
+    {
+      key: 'totalAmount', label: 'Total Amount', mobile: 'highlight',
+      render: (q) => `₹${(q.totalAmount || 0).toLocaleString('en-IN')}`,
+    },
+    {
+      key: 'status', label: 'Status', mobile: 'badge',
+      render: (q) => <Badge status={q.status || 'Active'} />,
+    },
+    {
+      key: 'actions', label: '', align: 'right', mobile: 'actions',
+      render: (q) => (
+        <div className="flex items-center justify-end gap-2">
+          <ActionTooltip content="Mark as Passed">
+              <button
+                  onClick={() => handleStatusUpdate(q.id, 'Converted')}
+                  className={`p-2 rounded-lg transition-all ${
+                     q.status === 'Converted'
+                         ? 'text-white bg-emerald-500 shadow-md shadow-emerald-500/30'
+                         : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
+                  }`}
+              >
+                  <CheckCircle className="w-4 h-4" />
+              </button>
+          </ActionTooltip>
+
+          <ActionTooltip content="Mark as Failed">
+              <button
+                  onClick={() => handleStatusUpdate(q.id, 'Lost')}
+                  className={`p-2 rounded-lg transition-all ${
+                     q.status === 'Lost'
+                         ? 'text-white bg-red-500 shadow-md shadow-red-500/30'
+                         : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                  }`}
+              >
+                  <XCircle className="w-4 h-4" />
+              </button>
+          </ActionTooltip>
+          <div className="w-px h-4 bg-slate-200 mx-1"></div>
+
+         <ActionTooltip content="Preview">
+           <Link
+             href={`/preview/${q.id}?type=Proforma`}
+             target="_blank"
+             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+           >
+             <Eye className="w-4 h-4" />
+           </Link>
+         </ActionTooltip>
+
+         <ActionTooltip content="Edit">
+           <Link
+             href={`/proforma/create?id=${q.id}`}
+             className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
+           >
+             <Edit className="w-4 h-4" />
+           </Link>
+         </ActionTooltip>
+
+         <ActionTooltip content="Share">
+           <button
+             onClick={() => {
+                 if (!q.publicId) {
+                     alert('This proforma is from an older version and does not have a shareable link yet.\n\nPlease click "Edit" and then "Save" once to generate a link.');
+                     return;
+                 }
+                 const slug = buildShareSlug(q.clientName, q.quotationNo, q.publicId);
+                 const shareUrl = `${window.location.origin}/proforma/${slug}`;
+                 navigator.clipboard.writeText(shareUrl)
+                     .then(() => alert('Share link copied!\n\n' + shareUrl))
+                     .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
+             }}
+             className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+           >
+             <Share2 className="w-4 h-4" />
+           </button>
+         </ActionTooltip>
+
+         <ActionTooltip content="Delete">
+           <button
+             onClick={() => handleDelete(q.id)}
+             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+           >
+             <Trash2 className="w-4 h-4" />
+           </button>
+         </ActionTooltip>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="bg-slate-50 min-h-screen font-sans relative overflow-x-hidden">
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 p-4 z-40 flex justify-between items-center shadow-sm">
-         <div className="font-bold text-slate-800">Champion Security</div>
-         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
-             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-         </button>
-      </div>
-
-      <Sidebar 
-          isOpen={isMobileMenuOpen} 
-          onClose={() => setIsMobileMenuOpen(false)} 
-          isCollapsed={isSidebarCollapsed}
-          toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      />
-
-      <main className={`min-w-0 p-4 md:p-8 pt-20 md:pt-8 transition-all duration-300 min-h-screen ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+    <AppShell>
         <div className="max-w-7xl mx-auto">
-          
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                  <FileText className="w-8 h-8 text-blue-600" />
-                  Proforma Invoices
-              </h1>
-              <p className="text-slate-500 text-sm mt-1">Manage all your proforma invoices.</p>
+
+          <PageHeader
+            icon={FileText}
+            title="Proforma Invoices"
+            subtitle="Manage all your proforma invoices."
+            search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Search proformas...' }}
+            actions={<Button href="/proforma/create" icon={Plus}>Create Proforma</Button>}
+          />
+
+          <Card className="overflow-hidden">
+            <div className="p-3 md:p-0">
+              <ResponsiveTable
+                columns={columns}
+                rows={filteredInvoices}
+                rowKey={(q) => q.id}
+                loading={loading}
+                emptyState={<>No proformas found. Click &quot;Create Proforma&quot; to start.</>}
+              />
             </div>
-            
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input 
-                  type="text" 
-                  placeholder="Search proformas..." 
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-black text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <LinkWithIcon href="/proforma/create" icon={Plus} label="Create Proforma" />
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50/50">
-                  <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    <th className="px-6 py-4">PI No</th>
-                    <th className="px-6 py-4">Client</th>
-                    <th className="px-6 py-4">Subject</th>
-                    <th className="px-6 py-4">Date</th>
-                    <th className="px-6 py-4">Total Amount</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {loading ? (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
-                        Loading documents...
-                      </td>
-                    </tr>
-                  ) : filteredInvoices.length === 0 ? (
-                     <tr>
-                      <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
-                        No proformas found. Click "Create Proforma" to start.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredInvoices.map((q) => (
-                      <tr key={q.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-slate-700">{q.quotationNo}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-slate-800">{q.clientName}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-slate-600 text-sm truncate max-w-[200px] cursor-pointer hover:whitespace-normal hover:overflow-visible hover:relative z-10 bg-transparent hover:bg-white hover:shadow-lg hover:p-2 rounded-lg transition-all" title={q.subject || q.data?.subject}>
-                            {q.subject || q.data?.subject || '-'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-slate-500 text-sm">
-                          {new Date(q.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-slate-700">
-                          ₹{(q.totalAmount || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td className="px-6 py-4">
-                          <StatusBadge status={q.status || 'Active'} />
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                             <ActionTooltip content="Mark as Passed">
-                                 <button 
-                                     onClick={() => handleStatusUpdate(q.id, 'Converted')}
-                                     className={`p-2 rounded-lg transition-all ${
-                                        q.status === 'Converted' 
-                                            ? 'text-white bg-emerald-500 shadow-md shadow-emerald-500/30' 
-                                            : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
-                                     }`}
-                                 >
-                                     <CheckCircle className="w-4 h-4" />
-                                 </button>
-                             </ActionTooltip>
-
-                             <ActionTooltip content="Mark as Failed">
-                                 <button 
-                                     onClick={() => handleStatusUpdate(q.id, 'Lost')}
-                                     className={`p-2 rounded-lg transition-all ${
-                                        q.status === 'Lost' 
-                                            ? 'text-white bg-red-500 shadow-md shadow-red-500/30' 
-                                            : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-                                     }`}
-                                 >
-                                     <XCircle className="w-4 h-4" />
-                                 </button>
-                             </ActionTooltip>
-                             <div className="w-px h-4 bg-slate-200 mx-1"></div>
-
-                            <ActionTooltip content="Preview">
-                              <Link 
-                                href={`/preview/${q.id}?type=Proforma`} 
-                                target="_blank"
-                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Link>
-                            </ActionTooltip>
-                            
-                            <ActionTooltip content="Edit">
-                              <Link 
-                                href={`/proforma/create?id=${q.id}`} 
-                                className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Link>
-                            </ActionTooltip>
-
-                            <ActionTooltip content="Share">
-                              <button 
-                                onClick={() => {
-                                    if (!q.publicId) {
-                                        alert('This proforma is from an older version and does not have a shareable link yet.\n\nPlease click "Edit" and then "Save" once to generate a link.');
-                                        return;
-                                    }
-                                    const slug = buildShareSlug(q.clientName, q.quotationNo, q.publicId);
-                                    const shareUrl = `${window.location.origin}/proforma/${slug}`;
-                                    navigator.clipboard.writeText(shareUrl)
-                                        .then(() => alert('Share link copied!\n\n' + shareUrl))
-                                        .catch(() => alert('Failed to copy link. Copy manually:\n' + shareUrl));
-                                }}
-                                className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
-                              >
-                                <Share2 className="w-4 h-4" />
-                              </button>
-                            </ActionTooltip>
-
-                            <ActionTooltip content="Delete">
-                              <button 
-                                onClick={() => handleDelete(q.id)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </ActionTooltip>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            
              <div className="p-4 border-t border-slate-100 flex justify-center text-xs text-slate-400">
                 End of list
             </div>
-          </div>
+          </Card>
 
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }
-
-const LinkWithIcon = ({ href, icon: Icon, label }) => (
-  <Link 
-    href={href} 
-    className="flex items-center justify-center md:justify-start gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-  >
-    <Icon className="w-4 h-4" />
-    {label}
-  </Link>
-);
-
-const StatusBadge = ({ status }) => {
-  const styles = {
-    Active: 'bg-blue-50 text-blue-600 border-blue-200 animate-pulse', 
-    Converted: 'bg-emerald-50 text-emerald-600 border-emerald-200',
-    Lost: 'bg-red-50 text-red-600 border-red-200',
-    Draft: 'bg-slate-50 text-slate-600 border-slate-200',
-  };
-  return (
-    <span className={`px-2.5 py-1 rounded-md text-xs font-bold border uppercase tracking-wider ${styles[status] || styles.Draft}`}>
-      {status}
-    </span>
-  );
-};
 
 const ActionTooltip = ({ children, content }) => (
   <div className="group/tooltip relative">

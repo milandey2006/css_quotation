@@ -19,6 +19,7 @@ export async function GET(request) {
             clientName: estimates.clientName,
             totalAmount: estimates.totalAmount,
             paidAmount: estimates.paidAmount,
+            payments: estimates.payments,
             status: estimates.status,
             createdAt: estimates.createdAt
         }).from(estimates).orderBy(desc(estimates.billDate));

@@ -1,13 +1,25 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, CheckCircle, AlertCircle, Clock, Smartphone } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+
+const PING_INTERVAL_MS = 60000; // send a fresh GPS position once a minute during office hours
+
+// Office hours: Monday-Saturday, 9 AM - 8 PM. Tracking runs automatically inside
+// this window whenever the punch page is open, independent of the punch in/out
+// buttons -- it's a passive presence signal, not tied to the attendance action.
+function isWithinOfficeHours(date) {
+  const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+  if (day === 0) return false;
+  const hours = date.getHours() + date.getMinutes() / 60;
+  return hours >= 9 && hours < 20;
+}
 
 export default function PunchPage() {
   const { user, isLoaded } = useUser();
   const [employeeId, setEmployeeId] = useState('');
-  
+
   // Auto-fill name when user is loaded
   useEffect(() => {
     if (isLoaded && user) {
@@ -21,11 +33,63 @@ export default function PunchPage() {
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isTracking, setIsTracking] = useState(false);
+  const pingIntervalRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const withinOfficeHours = isWithinOfficeHours(currentTime);
+
+  // Auto-start/stop pinging purely based on the office-hours window -- no punch
+  // button involved. Re-evaluated on every clock tick (currentTime updates each
+  // second above), so tracking switches on/off automatically at 9 AM / 8 PM
+  // without needing a reload, and always cleans up on unmount.
+  useEffect(() => {
+    if (withinOfficeHours && employeeId) {
+      startTracking(employeeId);
+    } else {
+      stopTracking();
+    }
+    return () => stopTracking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [withinOfficeHours, employeeId]);
+
+  const sendPing = (empId) => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetch('/api/punch/ping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId: empId,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          }),
+        }).catch((err) => console.error('Ping failed:', err));
+      },
+      (err) => console.error('Ping geo error:', err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const startTracking = (empId) => {
+    if (pingIntervalRef.current) return; // already running, don't restart the interval
+    setIsTracking(true);
+    sendPing(empId); // immediate first ping
+    pingIntervalRef.current = setInterval(() => sendPing(empId), PING_INTERVAL_MS);
+  };
+
+  const stopTracking = () => {
+    setIsTracking(false);
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+  };
 
   const handlePunch = (type) => {
     if (!employeeId.trim()) {
@@ -88,9 +152,9 @@ export default function PunchPage() {
 
       setStatus('success');
       setMessage(`Successfully Punched ${type === 'in' ? 'IN' : 'OUT'} at ${new Date().toLocaleTimeString()}`);
-      
+
       // Optional: clear input after success
-      // setEmployeeId(''); 
+      // setEmployeeId('');
     } catch (err) {
       console.error(err);
       setStatus('error');
@@ -109,6 +173,20 @@ export default function PunchPage() {
           </div>
           <h1 className="text-2xl font-bold">Office Attendance</h1>
           <p className="text-blue-100 text-sm mt-1">Champion Security System</p>
+          {isTracking ? (
+            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
+              </span>
+              Live tracking active
+            </div>
+          ) : (
+            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-xs font-medium text-blue-100/80">
+              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+              Outside office hours (9 AM - 8 PM, Mon-Sat)
+            </div>
+          )}
         </div>
 
         {/* Clock Section */}

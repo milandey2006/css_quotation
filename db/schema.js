@@ -113,9 +113,35 @@ export const estimates = pgTable('estimates', {
   clientName: text('client_name'),
   totalAmount: integer('total_amount'),
   paidAmount: integer('paid_amount').default(0),
+  payments: jsonb('payments').default([]), // array of { amount, date, method, note }
   status: text('status').default('pending'),
   data: jsonb('data').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const receipts = pgTable('receipts', {
+  id: serial('id').primaryKey(),
+  receiptNo: text('receipt_no').notNull(),
+  clientName: text('client_name'),
+  clientAddress: text('client_address'),
+  invoiceNo: text('invoice_no'),       // reference to a quotation/estimate/invoice no
+  billingRef: text('billing_ref'),     // auto-generated internal reference
+  description: text('description'),
+  amount: integer('amount').notNull(),
+  date: text('date').notNull(),
+  method: text('method').default('Cash'),
+  note: text('note'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Latest live GPS ping per employee -- one row per employee, upserted while they
+// remain punched in, so the Live Tracking map dot can move with them instead of
+// staying fixed at their punch-in location.
+export const employeeLocations = pgTable('employee_locations', {
+  employeeId: text('employee_id').primaryKey(),
+  lat: text('lat').notNull(),
+  lng: text('lng').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const attendanceRemarks = pgTable('attendance_remarks', {

@@ -20,7 +20,6 @@ export async function GET(request) {
             totalAmount: quotations.totalAmount,
             status: quotations.status,
             createdAt: quotations.createdAt,
-            // Extract necessary fields for searching without loading the entire JSON payload
             receiverPhone: sql`${quotations.data}->'receiver'->>'phone'`,
             receiverCompany: sql`${quotations.data}->'receiver'->>'company'`,
             receiverName: sql`${quotations.data}->'receiver'->>'name'`,

@@ -79,15 +79,20 @@ export default function AttendancePage() {
   }, []);
 
   // Process Data: Group by (Person + Date)
+  // Only "Office" punches belong here -- client-site check-ins (from the Work List
+  // "Punch in from Worklist" flow) live on the separate Site Visits page, so they're
+  // excluded to stop the two attendance types from mixing in one table.
   useEffect(() => {
-    if (!attendanceData.length) {
+    const officeOnly = attendanceData.filter(record => (record.clientName || '').toLowerCase() === 'office');
+
+    if (!officeOnly.length) {
       setProcessedRows([]);
       return;
     }
 
     const groups = {};
 
-    attendanceData.forEach(record => {
+    officeOnly.forEach(record => {
       const dateStr = new Date(record.timestamp).toLocaleDateString();
       const key = `${record.employeeId}-${dateStr}`;
 
@@ -135,13 +140,17 @@ export default function AttendancePage() {
         }
       }
 
+      const inLoc = firstInPunch?.location;
+      const outLoc = lastOutPunch?.location;
+
       return {
         ...group,
         startTime: firstInPunch ? new Date(firstInPunch.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
         endTime: lastOutPunch ? new Date(lastOutPunch.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
         hours,
         status,
-        mapLink: group.locations.length > 0 ? `https://www.google.com/maps?q=${group.locations[0].lat},${group.locations[0].lng}` : '#',
+        inMapLink: inLoc ? `https://www.google.com/maps?q=${inLoc.lat},${inLoc.lng}` : null,
+        outMapLink: outLoc ? `https://www.google.com/maps?q=${outLoc.lat},${outLoc.lng}` : null,
         remark: remarks[group.id] || ''
       };
     });
@@ -221,6 +230,36 @@ export default function AttendancePage() {
       }
   };
 
+  // Summarise a set of report rows: total hours worked, days present, Sundays
+  // (which count as paid leave and are excluded from leave totals), and the
+  // remaining working-day leaves within the selected date range.
+  const computeReportSummary = (rows) => {
+      let totalMinutes = 0;
+      rows.forEach(r => {
+          const m = /(\d+)\s*h\s*(\d+)\s*m/.exec(r.hours || '');
+          if (m) totalMinutes += parseInt(m[1]) * 60 + parseInt(m[2]);
+      });
+      const totalHours = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+
+      const employeeIds = new Set(rows.map(r => r.employeeId));
+      const singleEmployee = employeeIds.size <= 1;
+      const presentDays = new Set(rows.map(r => r.date)).size;
+
+      let sundays = 0, workingDays = 0, totalDays = 0;
+      if (reportStartDate && reportEndDate) {
+          const start = new Date(reportStartDate); start.setHours(0, 0, 0, 0);
+          const end = new Date(reportEndDate); end.setHours(0, 0, 0, 0);
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+              totalDays++;
+              if (d.getDay() === 0) sundays++;   // Sunday = paid leave
+              else workingDays++;
+          }
+      }
+      const leaves = Math.max(0, workingDays - presentDays);
+
+      return { totalHours, presentDays, sundays, workingDays, leaves, totalDays, singleEmployee };
+  };
+
   const generatePDF = () => {
        try {
           // Generate PDF
@@ -270,6 +309,26 @@ export default function AttendancePage() {
                   7: { cellWidth: 'auto' }, // Remark
               },
           });
+
+          // Summary block (last row) -- totals for the report period
+          const s = computeReportSummary(previewData);
+          const afterTableY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 45;
+          autoTable(doc, {
+              startY: afterTableY + 8,
+              head: [["Days Present", "Total Hours", "Sundays (Paid Leave)", "Leaves (excl. Sundays)"]],
+              body: [[s.presentDays, s.totalHours, s.sundays, s.leaves]],
+              styles: { fontSize: 10, cellPadding: 3, halign: 'center' },
+              headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+              bodyStyles: { fontStyle: 'bold', fontSize: 12 },
+              theme: 'grid',
+          });
+          if (!s.singleEmployee) {
+              const noteY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || afterTableY + 30;
+              doc.setFontSize(8);
+              doc.setTextColor(120);
+              doc.text("Note: report covers multiple employees; select one employee for accurate per-person leave counts.", 14, noteY + 6);
+              doc.setTextColor(0);
+          }
 
           const fileNameData = reportEmployeeName ? `_${reportEmployeeName.replace(/\s+/g, '_')}` : '';
           doc.save(`Attendance_Report${fileNameData}_${reportStartDate}_to_${reportEndDate}.pdf`);
@@ -502,20 +561,39 @@ export default function AttendancePage() {
                             {row.remark}
                         </td>
                         <td className="px-6 py-4 text-right flex justify-end gap-2">
-                          {row.mapLink !== '#' ? (
-                            <a 
-                              href={row.mapLink} 
-                              target="_blank" 
+                          {row.inMapLink ? (
+                            <a
+                              href={row.inMapLink}
+                              target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                              title="View on Map"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-full transition-colors"
+                              title="Punch-in location"
                             >
-                              <MapPin className="w-4 h-4" />
+                              <MapPin className="w-3 h-3" />
+                              In
                             </a>
                           ) : (
-                            <div className="inline-flex items-center justify-center p-2 text-slate-200 cursor-not-allowed" title="No location data">
-                              <MapPin className="w-4 h-4" />
-                            </div>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-300 border border-slate-100 rounded-full cursor-not-allowed" title="No punch-in location">
+                              <MapPin className="w-3 h-3" />
+                              In
+                            </span>
+                          )}
+                          {row.outMapLink ? (
+                            <a
+                              href={row.outMapLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-full transition-colors"
+                              title="Punch-out location"
+                            >
+                              <MapPin className="w-3 h-3" />
+                              Out
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-300 border border-slate-100 rounded-full cursor-not-allowed" title="No punch-out location">
+                              <MapPin className="w-3 h-3" />
+                              Out
+                            </span>
                           )}
                           
                           {isSuperAdmin && (
@@ -613,6 +691,41 @@ export default function AttendancePage() {
                             ))}
                         </tbody>
                     </table>
+
+                    {/* Summary (last row) */}
+                    {(() => {
+                        const s = computeReportSummary(previewData);
+                        return (
+                            <div className="mt-6 border-t-2 border-slate-300 pt-4">
+                                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">
+                                    Summary{!s.singleEmployee && ' (all employees)'}
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                                        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">Days Present</p>
+                                        <p className="text-xl font-bold text-slate-800">{s.presentDays}</p>
+                                    </div>
+                                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+                                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Total Hours</p>
+                                        <p className="text-xl font-bold text-slate-800">{s.totalHours}</p>
+                                    </div>
+                                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+                                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide">Sundays (Paid)</p>
+                                        <p className="text-xl font-bold text-slate-800">{s.sundays}</p>
+                                    </div>
+                                    <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
+                                        <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wide">Leaves (excl. Sun)</p>
+                                        <p className="text-xl font-bold text-slate-800">{s.leaves}</p>
+                                    </div>
+                                </div>
+                                {!s.singleEmployee && (
+                                    <p className="text-xs text-slate-400 mt-2 italic">
+                                        Tip: select a single employee for accurate per-person leave counts.
+                                    </p>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 <div className="p-6 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">

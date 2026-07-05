@@ -4,14 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import { buildShareSlug } from '../utils/shareSlug';
-import { 
-    Plus, Search, Trash2, Edit, FileText, 
-    Filter, Calendar, ChevronDown, CheckCircle, 
-    MoreHorizontal, ArrowUpRight, Menu, Printer, X, Eye, Share2
+import {
+    Plus, Search, Trash2, Edit, FileText,
+    Filter, Calendar, ChevronDown, CheckCircle,
+    MoreHorizontal, ArrowUpRight, Menu, Printer, X, Eye, Share2, IndianRupee
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import ConfirmModal from '../components/ConfirmModal';
+import EstimatePaymentModal from '../components/EstimatePaymentModal';
 
 export default function EstimatedListPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function EstimatedListPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
+  const [paymentModal, setPaymentModal] = useState({ isOpen: false, estimate: null });
 
   const [isPreview, setIsPreview] = useState(false);
 
@@ -70,11 +72,22 @@ export default function EstimatedListPage() {
     }
   };
 
-  const filteredEstimates = estimates.filter(est => 
-    (est.clientName || est.billTo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (est.billNo || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
+  const filteredEstimates = estimates.filter(est => {
+    const matchesSearch =
+      (est.clientName || est.billTo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (est.billNo || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const balance = (Number(est.totalAmount) || 0) - (Number(est.paidAmount) || 0);
+    const isPaidStatus = balance <= 0;
+
+    let matchesTab = true;
+    if (activeTab === 'Unpaid') matchesTab = !isPaidStatus;
+    else if (activeTab === 'Paid') matchesTab = isPaidStatus;
+    else if (activeTab === 'Overdue') matchesTab = false; // no due-date tracking on estimates yet
+
+    return matchesSearch && matchesTab;
+  });
+
   const totals = calculateTotals(filteredEstimates);
 
   const StatusTab = ({ label, count, active }) => (
@@ -272,7 +285,14 @@ export default function EstimatedListPage() {
                                             <td className="px-6 py-4 text-right">
                                                 {!isPreview && (
                                                 <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                    <button 
+                                                    <button
+                                                        onClick={() => setPaymentModal({ isOpen: true, estimate: est })}
+                                                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                        title="Record Payment"
+                                                    >
+                                                        <IndianRupee className="w-4 h-4" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => window.open(`/preview/${est.id}?type=Estimate`, '_blank')}
                                                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                                         title="View"
@@ -401,7 +421,7 @@ export default function EstimatedListPage() {
         </div>
       </main>
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false, id: null })}
         onConfirm={() => {
@@ -409,6 +429,19 @@ export default function EstimatedListPage() {
         }}
         title="Delete Estimate"
         message="Are you sure you want to permanently delete this estimate? This action cannot be undone."
+      />
+
+      <EstimatePaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal({ isOpen: false, estimate: null })}
+        estimate={paymentModal.estimate}
+        onPaymentSaved={(updated) => {
+          setEstimates(prev => prev.map(e =>
+            e.id === updated.id
+              ? { ...e, paidAmount: updated.paidAmount, payments: updated.payments }
+              : e
+          ));
+        }}
       />
     </div>
   );

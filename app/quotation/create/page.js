@@ -228,6 +228,7 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
           data: data,
           status: 'Active' 
       };
+      console.log('Saving payload:', payload);
 
       let response;
       const baseUrl = `/api/quotations`;

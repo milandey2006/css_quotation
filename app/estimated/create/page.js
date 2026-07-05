@@ -27,8 +27,7 @@ function CreateEstimateForm() {
     billDate: '', // Initial empty to match server
     paidAmount: 0,
     items: [
-      { description: 'ESSL K30 Biometric', make: 'ESSL', sn: 'PHY7244\n700691', qty: 1, rate: 6800 },
-      { description: 'E Time track light software and License', make: '', sn: '', qty: 1, rate: 2500 }
+      { description: '', make: '', sn: '', qty: 1, rate: 0 }
     ],
     paymentInstructions: 'Pay Cheque to\nChampion security system',
     terms: `1. Good once sold Will not be taken back or exchanged

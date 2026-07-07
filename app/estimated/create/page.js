@@ -4,10 +4,11 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import EstimatedPreview from '../../components/EstimatedPreview';
-import { Menu, Plus, Trash2, Printer, Save, ToggleLeft, ToggleRight, Share2 } from 'lucide-react';
+import { Menu, Plus, Trash2, Printer, Save, ToggleLeft, ToggleRight, Share2, ImageDown } from 'lucide-react';
 import { buildShareSlug } from '../../utils/shareSlug';
 import { useReactToPrint } from 'react-to-print';
 import { toast } from 'sonner';
+import { downloadElementAsImage } from '../../lib/downloadImage';
 
 function CreateEstimateForm() {
   const router = useRouter();
@@ -17,6 +18,10 @@ function CreateEstimateForm() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showGst, setShowGst] = useState(false); // Default OFF
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'saved'
+  const [isDownloading, setIsDownloading] = useState(false);
+  const previewRef = useRef(null); // Targets EstimatedPreview's own root -- unlike componentRef
+                                    // below (used for print), this node carries no CSS transform
+                                    // of its own, so modern-screenshot captures it at full size.
   
   // Form State
   const [formData, setFormData] = useState({
@@ -118,6 +123,18 @@ function CreateEstimateForm() {
       }
     `,
   });
+
+  const handleDownloadImage = async () => {
+    setIsDownloading(true);
+    try {
+      await downloadElementAsImage(previewRef.current, `Estimate_${formData.billNo.replace(/\//g, '-')}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save image');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const saveEstimate = async () => {
     try {
@@ -261,6 +278,18 @@ function CreateEstimateForm() {
                   <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-all shadow-lg shadow-slate-900/20 hover:scale-[1.02] active:scale-95 font-semibold">
                       <Printer className="w-4 h-4" />
                       <span className="text-sm">Print</span>
+                  </button>
+
+                  <button
+                      onClick={handleDownloadImage}
+                      disabled={isDownloading}
+                      className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm hover:scale-[1.02] active:scale-95 font-semibold disabled:opacity-60"
+                      title="Save as Image"
+                  >
+                      {isDownloading
+                        ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                        : <ImageDown className="w-4 h-4" />}
+                      <span className="text-sm hidden md:inline">Save Image</span>
                   </button>
                 </div>
             </div>
@@ -426,7 +455,7 @@ function CreateEstimateForm() {
             {/* RIGHT: Preview */}
             <div className="w-full md:w-7/12 lg:w-8/12 bg-slate-200/50 rounded-xl overflow-y-auto mb-20 md:mb-0 flex justify-center p-4 lg:p-8 border border-slate-200/60 shadow-inner">
                 <div ref={componentRef} className="origin-top scale-[0.45] sm:scale-[0.6] md:scale-[0.55] lg:scale-[0.7] xl:scale-[0.85] 2xl:scale-100 transition-transform">
-                    <EstimatedPreview data={formData} showGst={showGst} />
+                    <EstimatedPreview ref={previewRef} data={formData} showGst={showGst} />
                 </div>
             </div>
 

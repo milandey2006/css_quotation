@@ -1,20 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, CheckCircle, AlertCircle, Clock, Smartphone } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
-
-const PING_INTERVAL_MS = 60000; // send a fresh GPS position once a minute during office hours
-
-// Office hours: Monday-Saturday, 9 AM - 8 PM. Tracking runs automatically inside
-// this window whenever the punch page is open, independent of the punch in/out
-// buttons -- it's a passive presence signal, not tied to the attendance action.
-function isWithinOfficeHours(date) {
-  const day = date.getDay(); // 0 = Sunday, 6 = Saturday
-  if (day === 0) return false;
-  const hours = date.getHours() + date.getMinutes() / 60;
-  return hours >= 9 && hours < 20;
-}
 
 export default function PunchPage() {
   const { user, isLoaded } = useUser();
@@ -33,63 +21,11 @@ export default function PunchPage() {
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isTracking, setIsTracking] = useState(false);
-  const pingIntervalRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const withinOfficeHours = isWithinOfficeHours(currentTime);
-
-  // Auto-start/stop pinging purely based on the office-hours window -- no punch
-  // button involved. Re-evaluated on every clock tick (currentTime updates each
-  // second above), so tracking switches on/off automatically at 9 AM / 8 PM
-  // without needing a reload, and always cleans up on unmount.
-  useEffect(() => {
-    if (withinOfficeHours && employeeId) {
-      startTracking(employeeId);
-    } else {
-      stopTracking();
-    }
-    return () => stopTracking();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [withinOfficeHours, employeeId]);
-
-  const sendPing = (empId) => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        fetch('/api/punch/ping', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            employeeId: empId,
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }),
-        }).catch((err) => console.error('Ping failed:', err));
-      },
-      (err) => console.error('Ping geo error:', err),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
-  const startTracking = (empId) => {
-    if (pingIntervalRef.current) return; // already running, don't restart the interval
-    setIsTracking(true);
-    sendPing(empId); // immediate first ping
-    pingIntervalRef.current = setInterval(() => sendPing(empId), PING_INTERVAL_MS);
-  };
-
-  const stopTracking = () => {
-    setIsTracking(false);
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = null;
-    }
-  };
 
   const handlePunch = (type) => {
     if (!employeeId.trim()) {
@@ -111,7 +47,7 @@ export default function PunchPage() {
       (position) => {
         const { latitude, longitude } = position.coords;
         setLocation({ lat: latitude, lng: longitude });
-        
+
         savePunch(type, latitude, longitude);
       },
       (error) => {
@@ -134,7 +70,7 @@ export default function PunchPage() {
         clientName: 'Office',
         areaName: 'Office',
         workDetails,
-        type, 
+        type,
         location: { lat, lng }
       };
 
@@ -165,7 +101,7 @@ export default function PunchPage() {
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans text-white">
       <div className="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
-        
+
         {/* Header */}
         <div className="bg-blue-600 p-6 text-center">
           <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
@@ -173,20 +109,6 @@ export default function PunchPage() {
           </div>
           <h1 className="text-2xl font-bold">Office Attendance</h1>
           <p className="text-blue-100 text-sm mt-1">Champion Security System</p>
-          {isTracking ? (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs font-medium">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
-              </span>
-              Live tracking active
-            </div>
-          ) : (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1 text-xs font-medium text-blue-100/80">
-              <span className="w-2 h-2 rounded-full bg-slate-400"></span>
-              Outside office hours (9 AM - 8 PM, Mon-Sat)
-            </div>
-          )}
         </div>
 
         {/* Clock Section */}
@@ -203,8 +125,8 @@ export default function PunchPage() {
         <div className="p-6 space-y-6">
           <div>
             <label className="block text-slate-400 text-sm font-medium mb-2">Employee ID / Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               placeholder="e.g. John Doe"
@@ -216,7 +138,7 @@ export default function PunchPage() {
 
           <div>
              <label className="block text-slate-400 text-sm font-medium mb-2">Punch Type</label>
-             <select 
+             <select
                value={workDetails}
                onChange={(e) => setWorkDetails(e.target.value)}
                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-lg"
@@ -227,7 +149,7 @@ export default function PunchPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <button 
+            <button
               onClick={() => handlePunch('in')}
               className="flex flex-col items-center justify-center p-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-900/20 group"
             >
@@ -238,7 +160,7 @@ export default function PunchPage() {
               <span className="text-xs text-emerald-200 mt-1">Start Shift</span>
             </button>
 
-            <button 
+            <button
               onClick={() => handlePunch('out')}
               className="flex flex-col items-center justify-center p-4 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-xl transition-all shadow-lg shadow-rose-900/20 group"
             >
@@ -254,7 +176,7 @@ export default function PunchPage() {
         {/* Status Message (Error/Loading only) */}
         {status !== 'idle' && status !== 'success' && (
           <div className={`p-4 mx-6 mb-6 rounded-xl flex items-start gap-3 text-sm ${
-            status === 'error' ? 'bg-rose-900/50 text-rose-200 border border-rose-700/50' : 
+            status === 'error' ? 'bg-rose-900/50 text-rose-200 border border-rose-700/50' :
             'bg-blue-900/50 text-blue-200 border border-blue-700/50'
           }`}>
             {status === 'error' && <AlertCircle className="w-5 h-5 shrink-0" />}
@@ -277,7 +199,7 @@ export default function PunchPage() {
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900 mb-2">Punch Successful!</h2>
                   <p className="text-slate-600 mb-6">{message}</p>
-                  <button 
+                  <button
                     onClick={() => setStatus('idle')}
                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/30"
                   >

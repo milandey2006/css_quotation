@@ -134,14 +134,18 @@ export const receipts = pgTable('receipts', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Latest live GPS ping per employee -- one row per employee, upserted while they
-// remain punched in, so the Live Tracking map dot can move with them instead of
-// staying fixed at their punch-in location.
-export const employeeLocations = pgTable('employee_locations', {
-  employeeId: text('employee_id').primaryKey(),
-  lat: text('lat').notNull(),
-  lng: text('lng').notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+export const expenses = pgTable('expenses', {
+  id: serial('id').primaryKey(),
+  employeeId: integer('employee_id'), // references employees.id; nullable so a deleted employee doesn't orphan the record
+  employeeName: text('employee_name').notNull(), // snapshot at time of entry, survives employee edits/deletion
+  type: text('type').notNull().default('given'), // 'given' (company -> employee) | 'collected' (employee collected cash from a client, owes it back to the company)
+  category: text('category').notNull().default('Conveyance'), // Conveyance, Fuel, Food, Advance, Tools, Other -- only used when type='given'
+  clientName: text('client_name'), // only used when type='collected'
+  amount: integer('amount').notNull(),
+  date: text('date').notNull(), // YYYY-MM-DD
+  purpose: text('purpose'), // free-text reason/note
+  status: text('status').default('pending'), // pending | settled (meaning depends on type: deducted-from-salary for 'given', or remitted-to-company for 'collected')
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const attendanceRemarks = pgTable('attendance_remarks', {

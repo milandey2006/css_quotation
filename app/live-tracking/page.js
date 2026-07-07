@@ -17,10 +17,9 @@ const LiveMap = dynamic(() => import('../components/LiveMap'), {
   ),
 });
 
-// Tracking pings arrive roughly once a minute (see app/punch/page.js). Anyone
-// whose last ping is within this window is considered "currently live" --
-// generous enough to survive a couple of missed/delayed pings.
-const PING_FRESHNESS_MS = 3 * 60 * 1000;
+// An open punch-in older than this is treated as a forgotten punch-out, not
+// someone still on duty (see onDutyEmployees below for the full reasoning).
+const STALE_PUNCH_HOURS = 16;
 
 export default function LiveTrackingPage() {
   const { user, isLoaded } = useUser();
@@ -38,21 +37,16 @@ export default function LiveTrackingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [punches, setPunches] = useState([]);
-  const [pings, setPings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [focusedId, setFocusedId] = useState(null);
 
   const fetchData = async () => {
     try {
-      const [punchRes, pingRes] = await Promise.all([
-        fetch('/api/punch'),
-        fetch('/api/punch/ping'),
-      ]);
-      if (punchRes.ok) setPunches(await punchRes.json());
-      if (pingRes.ok) setPings(await pingRes.json());
+      const res = await fetch('/api/punch');
+      if (res.ok) setPunches(await res.json());
     } catch (error) {
-      console.error('Failed to fetch live data:', error);
+      console.error('Failed to fetch punches:', error);
     } finally {
       setLoading(false);
     }
@@ -64,9 +58,9 @@ export default function LiveTrackingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Live-ticking clock, used only for display text (elapsed/"updated Xm ago").
-  // Kept out of the memoized data below so it can't cause the map to re-fly
-  // every second -- see LiveMap.js for the full story on that bug.
+  // Live-ticking clock, used only for display text (elapsed time). Kept out of
+  // the memoized data below so it can't cause the map to re-fly every second --
+  // see LiveMap.js for the full story on that bug.
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(tick);
@@ -74,58 +68,47 @@ export default function LiveTrackingPage() {
 
   const isOffice = (p) => (p?.clientName || '').toLowerCase() === 'office';
 
-  // Latest OPEN punch-in per employee -- used only to enrich the live list with
-  // context (Office vs. client site, shift start time). It no longer gates who
-  // shows up as "live": tracking now runs automatically during office hours,
-  // independent of the punch in/out buttons.
-  const openPunchByEmployee = useMemo(() => {
-    const latestByEmployee = {};
+  // An employee is "on duty" right now if their most recent punch overall is an
+  // 'in' with no later 'out' -- i.e. they haven't clocked out of anything yet --
+  // AND that punch-in happened recently. Without the staleness cutoff, anyone
+  // who simply forgets to punch out even once (or leaves the company) stays
+  // stuck showing as "on duty" forever, since there's never a later 'out' to
+  // close it. STALE_PUNCH_HOURS is generous enough to cover a full workday
+  // (office hours are 9am-8pm) plus buffer, without hiding someone genuinely
+  // still on a long shift.
+  //
+  // Note: this shows each employee's location as captured AT PUNCH-IN, not a
+  // continuously moving position. Real-time GPS pinging while punched in was
+  // tried and dropped -- it only works while a worker keeps the punch page open
+  // in the foreground, which isn't how people actually use their phones (they
+  // punch in, then lock the screen or switch apps, and the browser kills the
+  // background timer). A punch-in/out snapshot is what's reliable.
+  const onDutyEmployees = useMemo(() => {
+    const byEmployee = {};
     punches.forEach(p => {
-      if (!latestByEmployee[p.employeeId] || new Date(p.timestamp) > new Date(latestByEmployee[p.employeeId].timestamp)) {
-        latestByEmployee[p.employeeId] = p;
+      if (!byEmployee[p.employeeId] || new Date(p.timestamp) > new Date(byEmployee[p.employeeId].timestamp)) {
+        byEmployee[p.employeeId] = p;
       }
     });
-    const openOnly = {};
-    Object.values(latestByEmployee).forEach(p => {
-      if (p.type === 'in') openOnly[p.employeeId] = p;
-    });
-    return openOnly;
+
+    const cutoff = Date.now() - STALE_PUNCH_HOURS * 60 * 60 * 1000;
+
+    return Object.values(byEmployee)
+      .filter(p => p.type === 'in' && new Date(p.timestamp).getTime() > cutoff)
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   }, [punches]);
 
-  // Anyone whose last ping is fresh is "live" right now. Deliberately not
-  // dependent on `now` -- freshness is evaluated against the pings/punch data
-  // itself, which already refreshes every 15s via the poll above, so this only
-  // recomputes when real data changes rather than every clock tick.
-  const liveEmployees = useMemo(() => {
-    const cutoff = Date.now() - PING_FRESHNESS_MS;
-    return pings
-      .filter(ping => new Date(ping.updatedAt).getTime() > cutoff)
-      .map(ping => {
-        const punch = openPunchByEmployee[ping.employeeId];
-        return {
-          id: ping.employeeId,
-          employeeId: ping.employeeId,
-          lat: ping.lat,
-          lng: ping.lng,
-          updatedAt: ping.updatedAt,
-          isOffice: isOffice(punch),
-          clientName: punch?.clientName,
-          punchTimestamp: punch?.timestamp,
-        };
-      })
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  }, [pings, openPunchByEmployee]);
-
-  const mapPoints = useMemo(() => liveEmployees.map(le => ({
-    id: le.id,
-    employeeId: le.employeeId,
-    lat: le.lat,
-    lng: le.lng,
-    isOffice: le.isOffice,
-    clientName: le.clientName,
-    punchTimestamp: le.punchTimestamp,
-    lastPingAt: le.updatedAt,
-  })), [liveEmployees]);
+  const mapPoints = useMemo(() => onDutyEmployees
+    .filter(p => p.location)
+    .map(p => ({
+      id: p.id,
+      employeeId: p.employeeId,
+      lat: p.location.lat,
+      lng: p.location.lng,
+      isOffice: isOffice(p),
+      clientName: p.clientName,
+      punchTimestamp: p.timestamp,
+    })), [onDutyEmployees]);
 
   const focusPoint = mapPoints.find(m => m.id === focusedId) || null;
 
@@ -156,12 +139,9 @@ export default function LiveTrackingPage() {
             <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pointer-events-none">
               <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg px-4 py-2.5 pointer-events-auto">
                 <h1 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                  </span>
+                  <Radio className="w-4 h-4 text-blue-500" />
                   Live Tracking
-                  <span className="text-slate-400 font-normal text-sm">· {liveEmployees.length} live</span>
+                  <span className="text-slate-400 font-normal text-sm">· {onDutyEmployees.length} on duty</span>
                 </h1>
               </div>
               <button
@@ -178,61 +158,54 @@ export default function LiveTrackingPage() {
           <div className="w-full md:w-[380px] flex-shrink-0 bg-white border-t md:border-t-0 md:border-l border-slate-200 overflow-y-auto">
             <div className="p-4 space-y-3">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide px-1">
-                Currently Tracked
+                Currently On Duty
               </p>
               <p className="text-[11px] text-slate-400 px-1 -mt-2">
-                Auto-tracked 9 AM - 8 PM, Mon-Sat, independent of Punch In/Out
+                Location shown is from punch-in, not continuously live
               </p>
 
               {loading ? (
-                <div className="p-6 text-center text-slate-400 text-sm">Loading live status...</div>
-              ) : liveEmployees.length === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-sm">Loading...</div>
+              ) : onDutyEmployees.length === 0 ? (
                 <div className="p-6 text-center">
                   <Radio className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                  <p className="text-slate-500 font-medium text-sm">No one is currently being tracked</p>
-                  <p className="text-slate-400 text-xs mt-1">Employees appear here while the punch page is open during office hours.</p>
+                  <p className="text-slate-500 font-medium text-sm">No one is currently punched in</p>
                 </div>
               ) : (
-                liveEmployees.map(le => (
-                  <button
-                    key={le.id}
-                    onClick={() => setFocusedId(le.id)}
-                    className={`w-full text-left rounded-xl border p-3 flex items-center gap-3 transition-colors cursor-pointer ${
-                      focusedId === le.id ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
-                        {le.employeeId.charAt(0).toUpperCase()}
+                onDutyEmployees.map(p => {
+                  const hasPoint = mapPoints.some(pt => pt.id === p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => hasPoint && setFocusedId(p.id)}
+                      className={`w-full text-left rounded-xl border p-3 flex items-center gap-3 transition-colors ${
+                        focusedId === p.id ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                      } ${hasPoint ? 'cursor-pointer' : 'cursor-default'}`}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                          {p.employeeId.charAt(0).toUpperCase()}
+                        </div>
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-white rounded-full ${isOffice(p) ? 'bg-emerald-500' : 'bg-indigo-500'}`}></span>
                       </div>
-                      <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-white rounded-full ${le.punchTimestamp ? (le.isOffice ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-amber-500'}`}></span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 text-sm truncate flex items-center gap-1.5">
-                        {le.employeeId}
-                        <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                          </span>
-                          LIVE
-                        </span>
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {le.punchTimestamp ? (le.isOffice ? 'Office' : (le.clientName || 'Client site')) : 'On Duty'}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      {le.punchTimestamp && (
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-slate-900 text-sm truncate">{p.employeeId}</p>
+                        <p className="text-xs text-slate-500 truncate">
+                          {isOffice(p) ? 'Office' : (p.clientName || 'Client site')}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
                         <p className="text-xs font-bold text-emerald-600 font-mono flex items-center gap-1 justify-end">
                           <Clock className="w-3 h-3" />
-                          {formatElapsed(le.punchTimestamp, now)}
+                          {formatElapsed(p.timestamp, now)}
                         </p>
-                      )}
-                      <p className="text-[10px] text-slate-400 mt-0.5">{formatAgo(le.updatedAt, now)}</p>
-                    </div>
-                  </button>
-                ))
+                        {!hasPoint && (
+                          <p className="text-[10px] text-slate-300 mt-0.5">no GPS</p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>
@@ -249,14 +222,4 @@ function formatElapsed(timestamp, now) {
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
   return `${h}h ${m}m`;
-}
-
-function formatAgo(timestamp, now) {
-  const diffMs = Math.max(0, now - new Date(timestamp));
-  const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 60) return 'updated just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `updated ${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  return `updated ${hours}h ${minutes % 60}m ago`;
 }

@@ -153,7 +153,6 @@ export default function WorksPage() {
               
               toast.success(`Successfully Punched ${type.toUpperCase()}!`);
               setPunchStatus(prev => ({ ...prev, [work.id]: type }));
-              fetchDocuments();
           } catch (err) {
               console.error(err);
               toast.error('Failed to save punch');

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import React from 'react';
 import { numberToWords } from '../utils/numberConverter';
 
-const EstimatedPreview = ({ data, showGst }) => {
+const EstimatedPreview = React.forwardRef(({ data, showGst }, ref) => {
   const safeData = {
     billTo: data?.billTo || '',
     billNo: data?.billNo || '',
@@ -31,7 +31,7 @@ const EstimatedPreview = ({ data, showGst }) => {
   const balanceDue = total - paid;
 
   return (
-    <div className="bg-[#fdfbf6] shadow-2xl mx-auto w-[210mm] min-h-[297mm] p-8 text-black font-sans relative">
+    <div ref={ref} className="bg-[#fdfbf6] shadow-2xl mx-auto w-[210mm] min-h-[297mm] p-8 text-black font-sans relative">
       
       {/* Header */}
       <div className="text-center mb-8">
@@ -184,6 +184,8 @@ const EstimatedPreview = ({ data, showGst }) => {
 
     </div>
   );
-};
+});
+
+EstimatedPreview.displayName = 'EstimatedPreview';
 
 export default EstimatedPreview;

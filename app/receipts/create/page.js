@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Printer, Save, Calendar } from 'lucide-react';
+import { Printer, Save, Calendar, ImageDown } from 'lucide-react';
 import ReceiptPreview from '../../components/ReceiptPreview';
+import { downloadElementAsImage } from '../../lib/downloadImage';
 
 function CreateReceiptContent() {
   const router = useRouter();
@@ -13,7 +14,9 @@ function CreateReceiptContent() {
 
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [mobileView, setMobileView] = useState('edit'); // 'edit' | 'preview'
+  const previewRef = useRef(null);
 
   const [data, setData] = useState({
     receiptNo: '',
@@ -102,6 +105,22 @@ function CreateReceiptContent() {
       return;
     }
     window.print();
+  };
+
+  const handleDownloadImage = async () => {
+    if (!data.receiptNo) {
+      toast.info('Save the receipt first, then download.');
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      await downloadElementAsImage(previewRef.current, `Receipt_${data.receiptNo.replace(/\//g, '-')}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save image');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (loading) {
@@ -268,6 +287,20 @@ function CreateReceiptContent() {
               <Printer className="w-4 h-4" />
               Print
             </button>
+            <button
+              onClick={handleDownloadImage}
+              disabled={isDownloading}
+              className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all border disabled:opacity-60 ${
+                data.receiptNo
+                  ? 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                  : 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+              }`}
+              title="Save as Image"
+            >
+              {isDownloading
+                ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                : <ImageDown className="w-4 h-4" />}
+            </button>
           </div>
 
           {!data.receiptNo && (
@@ -279,7 +312,7 @@ function CreateReceiptContent() {
       {/* Preview pane */}
       <div className={`flex-1 h-full overflow-y-auto overflow-x-auto bg-gray-200 p-4 md:p-8 justify-center relative print:w-full print:h-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block print:static pt-20 md:pt-8 ${mobileView === 'preview' ? 'flex' : 'hidden'} md:flex`}>
         <div className="receipt-print-wrapper transform scale-[0.5] sm:scale-[0.6] md:scale-[0.55] lg:scale-[0.7] xl:scale-[0.85] 2xl:scale-100 origin-top transition-transform duration-300 ease-out print:transform-none">
-          <ReceiptPreview data={data} />
+          <ReceiptPreview ref={previewRef} data={data} />
         </div>
       </div>
     </main>

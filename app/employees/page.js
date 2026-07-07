@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Link from 'next/link';
-import { Menu, Plus, Users, Trash2, Edit, Save, X } from 'lucide-react';
+import { Menu, Plus, Users, Trash2, Edit, Save, X, UserX, UserCheck } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ export default function EmployeesPage() {
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [editingId, setEditingId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'inactive' | 'all'
   const [formData, setFormData] = useState({
       name: '',
       designation: '',
@@ -31,7 +32,8 @@ export default function EmployeesPage() {
       ifscCode: '',
       joinDate: '',
       basicSalary: 0,
-      advanceBalance: 0
+      advanceBalance: 0,
+      status: 'active'
   });
 
   const { user, isLoaded } = useUser();
@@ -110,7 +112,8 @@ export default function EmployeesPage() {
           ifscCode: emp.ifscCode || '',
           joinDate: emp.joinDate ? new Date(emp.joinDate).toISOString().split('T')[0] : '', // Format for date input
           basicSalary: emp.basicSalary || 0,
-          advanceBalance: emp.advanceBalance || 0
+          advanceBalance: emp.advanceBalance || 0,
+          status: emp.status || 'active'
       });
       setView('form');
   };
@@ -130,10 +133,35 @@ export default function EmployeesPage() {
       }
   };
 
+  // Quick fire/rehire toggle from the list, without opening the full edit form.
+  const toggleEmployeeStatus = async (emp) => {
+      const newStatus = emp.status === 'inactive' ? 'active' : 'inactive';
+      setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, status: newStatus } : e));
+      try {
+          const res = await fetch(`/api/employees/${emp.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...emp, status: newStatus })
+          });
+          if (!res.ok) throw new Error();
+          toast.success(newStatus === 'inactive' ? `${emp.name} marked inactive` : `${emp.name} marked active`);
+      } catch (error) {
+          console.error(error);
+          toast.error('Failed to update status');
+          fetchEmployees(); // revert optimistic update
+      }
+  };
+
   const resetForm = () => {
       setEditingId(null);
-      setFormData({  name: '', designation: '', mobile: '', email: '', address: '', panNo: '', aadhaarNo: '', uanNo: '', bankAccountNo: '', ifscCode: '', joinDate: '', basicSalary: 0, advanceBalance: 0 });
+      setFormData({  name: '', designation: '', mobile: '', email: '', address: '', panNo: '', aadhaarNo: '', uanNo: '', bankAccountNo: '', ifscCode: '', joinDate: '', basicSalary: 0, advanceBalance: 0, status: 'active' });
   };
+
+  const visibleEmployees = employees.filter(emp => {
+      if (statusFilter === 'all') return true;
+      const empStatus = emp.status || 'active';
+      return empStatus === statusFilter;
+  });
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
@@ -155,7 +183,7 @@ export default function EmployeesPage() {
       <main className={`flex-1 p-4 md:p-8 overflow-y-auto pt-20 md:pt-8 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <div className="max-w-6xl mx-auto">
             
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                         <Users className="w-8 h-8 text-blue-600" />
@@ -163,9 +191,9 @@ export default function EmployeesPage() {
                     </h1>
                     <p className="text-slate-500 mt-1">Manage employee records.</p>
                 </div>
-                
+
                 {view === 'list' && (
-                    <button 
+                    <button
                         onClick={() => { resetForm(); setView('form'); }}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-lg shadow-blue-500/30 transition-all"
                     >
@@ -174,6 +202,28 @@ export default function EmployeesPage() {
                     </button>
                 )}
             </div>
+
+            {view === 'list' && (
+                <div className="flex gap-2 mb-6">
+                    {[
+                        { key: 'active', label: 'Active' },
+                        { key: 'inactive', label: 'Inactive' },
+                        { key: 'all', label: 'All' },
+                    ].map(tab => (
+                        <button
+                            key={tab.key}
+                            onClick={() => setStatusFilter(tab.key)}
+                            className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                                statusFilter === tab.key
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {view === 'list' ? (
                 loading ? (
@@ -186,6 +236,12 @@ export default function EmployeesPage() {
                         <p className="text-lg font-medium text-slate-700">No Employees Found</p>
                         <p className="text-sm mt-1">Click "Add Employee" to create one.</p>
                     </div>
+                ) : visibleEmployees.length === 0 ? (
+                    <div className="bg-white p-12 rounded-2xl border border-white/40 shadow-xl shadow-slate-200/40 text-center text-slate-500">
+                        <Users className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                        <p className="text-lg font-medium text-slate-700">No {statusFilter} employees</p>
+                        <button onClick={() => setStatusFilter('all')} className="text-blue-500 hover:text-blue-600 font-medium text-sm mt-2">Show all employees</button>
+                    </div>
                 ) : (
                     <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/40 border border-white/40 overflow-hidden">
                         <div className="overflow-x-auto">
@@ -197,12 +253,15 @@ export default function EmployeesPage() {
                                         <th className="px-6 py-4">Contact</th>
                                         <th className="px-6 py-4">Join Date</th>
                                         <th className="px-6 py-4">Adv. Balance</th>
+                                        <th className="px-6 py-4">Status</th>
                                         <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {employees.map((emp) => (
-                                        <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                                    {visibleEmployees.map((emp) => {
+                                        const isInactive = emp.status === 'inactive';
+                                        return (
+                                        <tr key={emp.id} className={`hover:bg-slate-50/50 transition-colors ${isInactive ? 'opacity-60' : ''}`}>
                                             <td className="px-6 py-4 font-medium text-slate-900">{emp.name}</td>
                                             <td className="px-6 py-4 text-slate-600">{emp.designation}</td>
                                             <td className="px-6 py-4 text-slate-600">
@@ -215,15 +274,35 @@ export default function EmployeesPage() {
                                             <td className="px-6 py-4 font-medium text-red-600">
                                                 ₹{(emp.advanceBalance || 0).toLocaleString('en-IN')}
                                             </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                                                    isInactive
+                                                        ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                }`}>
+                                                    {isInactive ? 'Inactive' : 'Active'}
+                                                </span>
+                                            </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <button 
+                                                    <button
+                                                        onClick={() => toggleEmployeeStatus(emp)}
+                                                        className={`p-2 rounded-lg transition-colors ${
+                                                            isInactive
+                                                                ? 'text-emerald-600 hover:bg-emerald-50'
+                                                                : 'text-amber-600 hover:bg-amber-50'
+                                                        }`}
+                                                        title={isInactive ? 'Mark Active' : 'Mark Inactive'}
+                                                    >
+                                                        {isInactive ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleEdit(emp)}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => setConfirmModal({ isOpen: true, id: emp.id })}
                                                         className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                                     >
@@ -232,7 +311,8 @@ export default function EmployeesPage() {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -256,6 +336,18 @@ export default function EmployeesPage() {
                             <Input name="joinDate" label="Join Date" type="date" value={formData.joinDate} onChange={handleInputChange} />
                             <Input name="basicSalary" label="Basic Salary" type="number" value={formData.basicSalary} onChange={handleInputChange} />
                             <Input name="advanceBalance" label="Advance Balance" type="number" value={formData.advanceBalance} onChange={handleInputChange} />
+                            <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700 cursor-pointer"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive (Fired / Left)</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <div className="space-y-4">

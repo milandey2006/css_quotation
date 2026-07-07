@@ -25,7 +25,7 @@ const amountInWords = (n) => {
   return `${core} Rupees Only`;
 };
 
-const ReceiptPreview = ({ data }) => {
+const ReceiptPreview = React.forwardRef(({ data }, ref) => {
   const d = data || {};
   const amount = Number(d.amount) || 0;
   const description = d.description || (d.invoiceNo ? `Invoice #${d.invoiceNo}` : 'Payment received');
@@ -63,7 +63,7 @@ const ReceiptPreview = ({ data }) => {
         `}
       </style>
 
-      <div className="receipt-a4-sheet bg-white mx-auto w-[210mm] min-h-[297mm] p-[15mm] text-[13px] leading-relaxed text-black shadow-lg border border-gray-200 relative flex flex-col print:shadow-none print:border-none print:w-full print:min-h-[297mm]">
+      <div ref={ref} className="receipt-a4-sheet bg-white mx-auto w-[210mm] min-h-[297mm] p-[15mm] text-[13px] leading-relaxed text-black shadow-lg border border-gray-200 relative flex flex-col print:shadow-none print:border-none print:w-full print:min-h-[297mm]">
 
         {/* Title + Logo */}
         <div className="flex justify-between items-start mb-8">
@@ -164,6 +164,8 @@ const ReceiptPreview = ({ data }) => {
       </div>
     </div>
   );
-};
+});
+
+ReceiptPreview.displayName = 'ReceiptPreview';
 
 export default ReceiptPreview;

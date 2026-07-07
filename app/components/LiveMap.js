@@ -62,14 +62,6 @@ const formatElapsed = (timestamp, now) => {
   return `${h}h ${m}m`;
 };
 
-const formatAgo = (timestamp, now) => {
-  const diffMs = Math.max(0, now - new Date(timestamp));
-  const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}m ago`;
-};
-
 export default function LiveMap({ points, focusPoint, now }) {
   const initialCenter = useRef(
     points.length > 0
@@ -95,15 +87,11 @@ export default function LiveMap({ points, focusPoint, now }) {
             <div style={{ fontSize: 13 }}>
               <strong>{p.employeeId}</strong>
               <br />
-              {p.punchTimestamp ? (p.isOffice ? 'Office' : (p.clientName || 'Client site')) : 'On Duty'}
-              {p.punchTimestamp && (
-                <>
-                  <br />
-                  <span style={{ color: '#059669', fontWeight: 600 }}>{formatElapsed(p.punchTimestamp, now)}</span> on shift
-                </>
-              )}
+              {p.isOffice ? 'Office' : (p.clientName || 'Client site')}
               <br />
-              <span style={{ color: '#059669', fontSize: 11 }}>● Live · {formatAgo(p.lastPingAt, now)}</span>
+              <span style={{ color: '#059669', fontWeight: 600 }}>{formatElapsed(p.punchTimestamp, now)}</span> on shift
+              <br />
+              <span style={{ color: '#94a3b8', fontSize: 11 }}>Location from punch-in</span>
             </div>
           </Popup>
         </Marker>

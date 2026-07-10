@@ -134,6 +134,11 @@ export default function WorksPage() {
 
               if (!response.ok) throw new Error('Failed to punch');
 
+              // Punch IN marks the job Active (someone's on site).
+              if (type === 'in') {
+                  await updateStatus(work.id, 'active');
+              }
+
               // 2. If Punch OUT, create worksheet entry and mark work as completed
               if (type === 'out') {
                   

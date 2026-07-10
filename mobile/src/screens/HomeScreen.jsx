@@ -74,6 +74,7 @@ export default function HomeScreen({ name, onUnpair }) {
           ? `Office Punch ${type === 'in' ? 'In' : 'Out'}`
           : selectedWork.instructions || `Client Punch ${type === 'in' ? 'In' : 'Out'} for ${selectedWork.clientName}`,
         location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+        workId: isOffice ? undefined : selectedWork.id,
       });
 
       if (type === 'in') await startShiftTracking();
@@ -81,6 +82,13 @@ export default function HomeScreen({ name, onUnpair }) {
 
       setPunchStatus('success');
       setPunchMsg(`Punched ${type === 'in' ? 'IN' : 'OUT'} at ${new Date().toLocaleTimeString()}`);
+
+      // A punch-out marks the job Done server-side, so it drops off this list.
+      // Refresh so the employee sees an accurate set of open jobs.
+      if (!isOffice && type === 'out') {
+        setSelectedWorkId(null);
+        loadWorks();
+      }
     } catch (err) {
       setPunchStatus('error');
       setPunchMsg(err.message || 'Punch failed. Check your signal and try again.');

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
 import { db } from '../../../../db';
-import { punches } from '../../../../db/schema';
+import { punches, works } from '../../../../db/schema';
 import { authenticateDevice } from '../_lib/auth';
 
 export async function POST(request) {
@@ -11,7 +12,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { clientName, areaName, type, location, workDetails } = body;
+    const { clientName, areaName, type, location, workDetails, workId } = body;
 
     if (!type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -27,6 +28,14 @@ export async function POST(request) {
       lng: String(location?.lng || ''),
       timestamp: new Date(),
     }).returning();
+
+    // When the punch is against an assigned job, move that job's status along
+    // automatically: punch-in marks it Active (someone's on site), punch-out
+    // marks it Done. Saves the office from updating it by hand.
+    if (workId) {
+      const newStatus = type === 'in' ? 'active' : 'completed';
+      await db.update(works).set({ status: newStatus }).where(eq(works.id, Number(workId)));
+    }
 
     return NextResponse.json(inserted[0]);
   } catch (error) {

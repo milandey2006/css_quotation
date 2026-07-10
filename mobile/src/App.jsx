@@ -1,8 +1,66 @@
 import React, { useEffect, useState } from 'react';
-import { getToken, getName, getOnDuty } from './lib/storage';
-import { startTracking } from './lib/tracker';
+import { getToken, getName, getOnDuty, clearSession } from './lib/storage';
+import { startTracking, stopTracking } from './lib/tracker';
 import PairingScreen from './screens/PairingScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
+import HistoryScreen from './screens/HistoryScreen.jsx';
+
+function PairedApp({ name, onUnpair }) {
+  const [view, setView] = useState('home'); // 'home' | 'history'
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const go = (v) => {
+    setView(v);
+    setMenuOpen(false);
+  };
+
+  const handleUnpair = async () => {
+    if (!confirm('Unpair this phone? You will need a new code to use it again.')) return;
+    await stopTracking();
+    await clearSession();
+    onUnpair();
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="appbar">
+        <button className="hamburger" onClick={() => setMenuOpen(true)} aria-label="Menu">
+          <span />
+          <span />
+          <span />
+        </button>
+        <span className="appbar-title">{view === 'home' ? 'Attendance' : 'My History'}</span>
+        <span className="appbar-spacer" />
+      </header>
+
+      {menuOpen && (
+        <div className="drawer-overlay" onClick={() => setMenuOpen(false)}>
+          <div className="drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-head">
+              <div className="drawer-logo">CS</div>
+              <div>
+                <div className="drawer-name">{name}</div>
+                <div className="drawer-sub">Champion Security</div>
+              </div>
+            </div>
+            <button className={`drawer-item ${view === 'home' ? 'active' : ''}`} onClick={() => go('home')}>
+              Punch In / Out
+            </button>
+            <button className={`drawer-item ${view === 'history' ? 'active' : ''}`} onClick={() => go('history')}>
+              My History
+            </button>
+            <div className="drawer-spacer" />
+            <button className="drawer-item danger" onClick={handleUnpair}>
+              Unpair device
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="app-body">{view === 'home' ? <HomeScreen /> : <HistoryScreen />}</div>
+    </div>
+  );
+}
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -39,5 +97,5 @@ export default function App() {
     return <PairingScreen onPaired={loadSession} />;
   }
 
-  return <HomeScreen name={session.name} onUnpair={loadSession} />;
+  return <PairedApp name={session.name} onUnpair={loadSession} />;
 }

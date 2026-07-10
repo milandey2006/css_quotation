@@ -30,6 +30,18 @@ export async function fetchAssignedWorks() {
   return res.json(); // [{ id, clientName, clientPhone, clientAddress, instructions, status }]
 }
 
+export async function fetchPunchHistory() {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/punches`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to load history (${res.status})`);
+  }
+  return res.json(); // [{ id, type, clientName, areaName, timestamp, workDetails }]
+}
+
 export async function submitPunch({ type, clientName, areaName, workDetails, location, workId }) {
   const token = await getToken();
   const res = await fetch(`${API_BASE_URL}/api/mobile/punch`, {

@@ -173,6 +173,15 @@ export const locationPings = pgTable('location_pings', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Records each FAILED device-pairing attempt (wrong/expired code) keyed by IP,
+// so we can lock an IP out after too many failures — a brute-force guard on the
+// 6-digit pairing code. Successful pairings clear an IP's rows.
+export const pairingAttempts = pgTable('pairing_attempts', {
+  id: serial('id').primaryKey(),
+  ip: text('ip').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const worksheets = pgTable('worksheets', {
   id: serial('id').primaryKey(),
   date: text('date'), // Storing as text for simplicity with date inputs

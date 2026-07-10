@@ -1,19 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { submitPunch, fetchAssignedWorks } from '../lib/api';
-import { clearSession, setOnDuty } from '../lib/storage';
+import { setOnDuty, setPunchState, getPunchState } from '../lib/storage';
 import { startTracking, stopTracking } from '../lib/tracker';
 
-export default function HomeScreen({ name, onUnpair }) {
+function timeLabel(d) {
+  return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export default function HomeScreen() {
   const [site, setSite] = useState('office'); // 'office' | 'client'
   const [punchStatus, setPunchStatus] = useState('idle'); // idle | loading | success | error
   const [punchMsg, setPunchMsg] = useState('');
+  const [punchInfo, setPunchInfo] = useState(null); // { status:'in'|'out', label, at }
 
   // Assigned jobs (only loaded/shown in client mode)
   const [works, setWorks] = useState([]);
   const [worksLoading, setWorksLoading] = useState(false);
   const [worksError, setWorksError] = useState('');
   const [selectedWorkId, setSelectedWorkId] = useState(null);
+
+  useEffect(() => {
+    getPunchState().then(setPunchInfo);
+  }, []);
 
   const loadWorks = async () => {
     setWorksLoading(true);
@@ -66,6 +75,7 @@ export default function HomeScreen({ name, onUnpair }) {
         timeout: 15000,
       });
       const isOffice = site === 'office';
+      const label = isOffice ? 'Office' : selectedWork.clientName;
       await submitPunch({
         type,
         clientName: isOffice ? 'Office' : selectedWork.clientName,
@@ -80,11 +90,15 @@ export default function HomeScreen({ name, onUnpair }) {
       if (type === 'in') await startShiftTracking();
       else await stopShiftTracking();
 
+      // Persist the current punch state so it survives the app being killed.
+      const info = { status: type, label, at: new Date().toISOString() };
+      await setPunchState(info);
+      setPunchInfo(info);
+
       setPunchStatus('success');
       setPunchMsg(`Punched ${type === 'in' ? 'IN' : 'OUT'} at ${new Date().toLocaleTimeString()}`);
 
       // A punch-out marks the job Done server-side, so it drops off this list.
-      // Refresh so the employee sees an accurate set of open jobs.
       if (!isOffice && type === 'out') {
         setSelectedWorkId(null);
         loadWorks();
@@ -95,23 +109,33 @@ export default function HomeScreen({ name, onUnpair }) {
     }
   };
 
-  const handleUnpair = async () => {
-    if (!confirm('Unpair this phone? You will need a new code to use it again.')) return;
-    await stopShiftTracking();
-    await clearSession();
-    onUnpair();
-  };
+  const isIn = punchInfo?.status === 'in';
 
   return (
     <div className="screen">
-      <div className="topbar">
-        <div>
-          <p className="greeting">Hello,</p>
-          <h1 className="name">{name}</h1>
+      {/* Persistent punch-status banner — the employee can always see whether
+          they're currently punched in, even after reopening the app. */}
+      <div className={`punch-status ${isIn ? 'in' : 'out'}`}>
+        <span className={`ps-dot ${isIn ? 'live' : ''}`} />
+        <div className="ps-text">
+          {isIn ? (
+            <>
+              <div className="ps-title">You're PUNCHED IN</div>
+              <div className="ps-sub">
+                {punchInfo.label} · since {timeLabel(punchInfo.at)}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="ps-title">You're punched out</div>
+              {punchInfo?.at && (
+                <div className="ps-sub">
+                  Last: {punchInfo.label} at {timeLabel(punchInfo.at)}
+                </div>
+              )}
+            </>
+          )}
         </div>
-        <button className="btn ghost small" onClick={handleUnpair}>
-          Unpair
-        </button>
       </div>
 
       <div className="card">

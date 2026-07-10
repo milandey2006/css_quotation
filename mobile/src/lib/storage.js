@@ -5,6 +5,7 @@ import { Preferences } from '@capacitor/preferences';
 const TOKEN_KEY = 'deviceToken';
 const NAME_KEY = 'employeeName';
 const ON_DUTY_KEY = 'onDuty';
+const PUNCH_STATE_KEY = 'punchState';
 
 export async function saveSession({ deviceToken, name }) {
   await Preferences.set({ key: TOKEN_KEY, value: deviceToken });
@@ -25,6 +26,23 @@ export async function clearSession() {
   await Preferences.remove({ key: TOKEN_KEY });
   await Preferences.remove({ key: NAME_KEY });
   await Preferences.remove({ key: ON_DUTY_KEY });
+  await Preferences.remove({ key: PUNCH_STATE_KEY });
+}
+
+// Current punch state, persisted so it survives the app being cleared from RAM.
+// Shape: { status: 'in' | 'out', label: string, at: ISO string }.
+export async function setPunchState(state) {
+  await Preferences.set({ key: PUNCH_STATE_KEY, value: JSON.stringify(state) });
+}
+
+export async function getPunchState() {
+  const { value } = await Preferences.get({ key: PUNCH_STATE_KEY });
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 // On-duty flag: true between a punch-in and the next punch-out. Persisted so

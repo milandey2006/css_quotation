@@ -456,38 +456,11 @@ export default function WorksPage() {
                                         )}
                                     </div>
 
-                                    {/* Assignment Section */}
-                                    <div className="mb-3">
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {users.map(u => {
-                                                const isAssigned = (work.userIds && work.userIds.includes(u.id)) || work.userId === u.id;
-                                                return (
-                                                    <button
-                                                        key={u.id}
-                                                        onClick={() => {
-                                                            const currentIds = work.userIds || (work.userId ? [work.userId] : []);
-                                                            const newIds = isAssigned 
-                                                                ? currentIds.filter(id => id !== u.id)
-                                                                : [...currentIds, u.id];
-                                                            assignUser(work.id, newIds);
-                                                        }}
-                                                        className={`text-[10px] px-1.5 py-0.5 rounded border transition-all ${
-                                                            isAssigned 
-                                                                ? 'bg-blue-100 text-blue-700 border-blue-200 font-bold' 
-                                                                : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
-                                                        }`}
-                                                    >
-                                                        {u.name}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Field-staff (mobile app) assignment */}
+                                    {/* Field-staff (mobile app) assignment — the only assignment that
+                                        drives the phone app. (The old Clerk-user "blue" row was removed.) */}
                                     {isAdmin && (
                                       <div className="mb-3">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Field staff (app)</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Assign to field staff</p>
                                         <div className="flex flex-wrap gap-1.5">
                                             {employees.map(e => {
                                                 const assignedIds = Array.isArray(work.employeeIds) ? work.employeeIds.map(Number) : [];

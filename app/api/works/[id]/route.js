@@ -17,7 +17,8 @@ export async function PUT(request, { params }) {
     const updateData = {};
     if (status) updateData.status = status;
     if (userId !== undefined) updateData.userId = userId;
-    if (body.userIds !== undefined) updateData.userIds = body.userIds; // Handle multi-user update
+    if (body.userIds !== undefined) updateData.userIds = body.userIds; // Handle multi-user update (Clerk/office staff)
+    if (body.employeeIds !== undefined) updateData.employeeIds = body.employeeIds; // Field-staff assignment (mobile app)
     if (clientName) updateData.clientName = clientName;
     if (clientPhone) updateData.clientPhone = clientPhone;
     if (clientAddress) updateData.clientAddress = clientAddress;

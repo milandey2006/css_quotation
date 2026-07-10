@@ -98,10 +98,11 @@ export async function startTracking() {
   if (watcherId != null) return watcherId;
   watcherId = await BackgroundGeolocation.addWatcher(
     {
-      // This text shows in the persistent notification Android requires for
-      // background location — employees will see it while on shift.
-      backgroundMessage: 'Sharing your location with the office during your shift.',
-      backgroundTitle: 'Champion Security — Tracking active',
+      // Android forces a persistent notification while an app uses background
+      // location — it can't be hidden. Kept deliberately neutral so it reads as
+      // a generic "app is running" notice rather than drawing attention to GPS.
+      backgroundMessage: 'App is running.',
+      backgroundTitle: 'Champion Security',
       requestPermissions: true,
       stale: false,
       distanceFilter: DISTANCE_FILTER_M,

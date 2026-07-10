@@ -46,7 +46,8 @@ export const works = pgTable('works', {
   clientAddress: text('client_address'),
   instructions: text('instructions'),
   userId: text('user_id'), // Clerk User ID - DEPRECATED
-  userIds: jsonb('user_ids'), // Array of Clerk User IDs
+  userIds: jsonb('user_ids'), // Array of Clerk User IDs (office staff with a web login)
+  employeeIds: jsonb('employee_ids').default([]), // Array of employees.id — field staff who use the mobile app (no Clerk login)
   status: text('status').default('pending'), // pending, completed
   createdAt: timestamp('created_at').defaultNow(),
 });

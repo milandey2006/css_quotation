@@ -1,44 +1,63 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
-import { submitPunch } from '../lib/api';
-import { clearSession } from '../lib/storage';
-import {
-  startTracking,
-  stopTracking,
-  syncNow,
-  onStatusChange,
-  openSettings,
-} from '../lib/tracker';
+import { submitPunch, fetchAssignedWorks } from '../lib/api';
+import { clearSession, setOnDuty } from '../lib/storage';
+import { startTracking, stopTracking } from '../lib/tracker';
 
 export default function HomeScreen({ name, onUnpair }) {
-  const [track, setTrack] = useState({ active: false, lastSyncAt: null, pending: 0 });
-
-  // Punch form state
   const [site, setSite] = useState('office'); // 'office' | 'client'
-  const [clientName, setClientName] = useState('');
-  const [areaName, setAreaName] = useState('');
   const [punchStatus, setPunchStatus] = useState('idle'); // idle | loading | success | error
   const [punchMsg, setPunchMsg] = useState('');
 
-  useEffect(() => onStatusChange(setTrack), []);
+  // Assigned jobs (only loaded/shown in client mode)
+  const [works, setWorks] = useState([]);
+  const [worksLoading, setWorksLoading] = useState(false);
+  const [worksError, setWorksError] = useState('');
+  const [selectedWorkId, setSelectedWorkId] = useState(null);
 
-  const toggleTracking = async () => {
+  const loadWorks = async () => {
+    setWorksLoading(true);
+    setWorksError('');
     try {
-      if (track.active) {
-        await stopTracking();
-      } else {
-        await startTracking();
-      }
+      setWorks(await fetchAssignedWorks());
     } catch (err) {
-      setPunchStatus('error');
-      setPunchMsg(
-        'Could not start tracking. Make sure location is set to "Allow all the time".'
-      );
-      openSettings();
+      setWorksError(err.message || 'Could not load your jobs.');
+    } finally {
+      setWorksLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (site === 'client') loadWorks();
+  }, [site]);
+
+  const selectedWork = works.find((w) => w.id === selectedWorkId) || null;
+
+  // Tracking follows the punch state — it starts silently on punch-in and stops
+  // on punch-out, so an employee is only tracked while actually on the clock.
+  const startShiftTracking = async () => {
+    try {
+      await startTracking();
+      await setOnDuty(true);
+    } catch (e) {
+      console.error('startTracking failed:', e);
+    }
+  };
+  const stopShiftTracking = async () => {
+    try {
+      await stopTracking();
+    } catch (e) {
+      console.error('stopTracking failed:', e);
+    }
+    await setOnDuty(false);
+  };
+
   const doPunch = async (type) => {
+    if (site === 'client' && !selectedWork) {
+      setPunchStatus('error');
+      setPunchMsg('Please select a job first.');
+      return;
+    }
     setPunchStatus('loading');
     setPunchMsg('Getting your location…');
     try {
@@ -49,13 +68,17 @@ export default function HomeScreen({ name, onUnpair }) {
       const isOffice = site === 'office';
       await submitPunch({
         type,
-        clientName: isOffice ? 'Office' : clientName || 'Client site',
-        areaName: isOffice ? 'Office' : areaName || '',
+        clientName: isOffice ? 'Office' : selectedWork.clientName,
+        areaName: isOffice ? 'Office' : selectedWork.clientAddress || '',
         workDetails: isOffice
           ? `Office Punch ${type === 'in' ? 'In' : 'Out'}`
-          : `Client Punch ${type === 'in' ? 'In' : 'Out'}`,
+          : selectedWork.instructions || `Client Punch ${type === 'in' ? 'In' : 'Out'} for ${selectedWork.clientName}`,
         location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
       });
+
+      if (type === 'in') await startShiftTracking();
+      else await stopShiftTracking();
+
       setPunchStatus('success');
       setPunchMsg(`Punched ${type === 'in' ? 'IN' : 'OUT'} at ${new Date().toLocaleTimeString()}`);
     } catch (err) {
@@ -66,14 +89,10 @@ export default function HomeScreen({ name, onUnpair }) {
 
   const handleUnpair = async () => {
     if (!confirm('Unpair this phone? You will need a new code to use it again.')) return;
-    await stopTracking();
+    await stopShiftTracking();
     await clearSession();
     onUnpair();
   };
-
-  const lastSync = track.lastSyncAt
-    ? new Date(track.lastSyncAt).toLocaleTimeString()
-    : 'never';
 
   return (
     <div className="screen">
@@ -87,34 +106,6 @@ export default function HomeScreen({ name, onUnpair }) {
         </button>
       </div>
 
-      {/* Tracking status */}
-      <div className={`card tracking ${track.active ? 'on' : 'off'}`}>
-        <div className="tracking-row">
-          <div>
-            <div className="tracking-state">
-              <span className={`dot ${track.active ? 'live' : ''}`} />
-              {track.active ? 'Tracking active' : 'Tracking paused'}
-            </div>
-            <p className="hint tight">
-              Last sync: {lastSync}
-              {track.pending > 0 ? ` · ${track.pending} queued` : ''}
-            </p>
-          </div>
-          <button
-            className={`btn ${track.active ? 'danger' : 'primary'} small`}
-            onClick={toggleTracking}
-          >
-            {track.active ? 'Stop' : 'Start'}
-          </button>
-        </div>
-        {track.active && (
-          <button className="btn ghost full" onClick={syncNow}>
-            Sync now
-          </button>
-        )}
-      </div>
-
-      {/* Punch */}
       <div className="card">
         <h2>Punch In / Out</h2>
 
@@ -134,19 +125,65 @@ export default function HomeScreen({ name, onUnpair }) {
         </div>
 
         {site === 'client' && (
-          <div className="fields">
-            <input
-              className="text-input"
-              placeholder="Client name"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-            />
-            <input
-              className="text-input"
-              placeholder="Area / work details"
-              value={areaName}
-              onChange={(e) => setAreaName(e.target.value)}
-            />
+          <div className="works">
+            {worksLoading ? (
+              <p className="hint tight">Loading your jobs…</p>
+            ) : worksError ? (
+              <div className="alert error">
+                {worksError}{' '}
+                <button className="linklike" onClick={loadWorks}>
+                  Retry
+                </button>
+              </div>
+            ) : works.length === 0 ? (
+              <p className="hint tight">No jobs assigned to you yet. Ask the office to assign one.</p>
+            ) : (
+              <div className="work-list">
+                {works.map((w) => (
+                  <button
+                    key={w.id}
+                    className={`work-item ${selectedWorkId === w.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedWorkId(w.id)}
+                  >
+                    <span className="work-name">{w.clientName}</span>
+                    {w.clientAddress && <span className="work-addr">{w.clientAddress}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedWork && (
+              <div className="work-detail">
+                {selectedWork.clientAddress && (
+                  <div className="detail-row">
+                    <span className="detail-label">Address</span>
+                    <span>{selectedWork.clientAddress}</span>
+                  </div>
+                )}
+                {selectedWork.clientPhone && (
+                  <div className="detail-row">
+                    <span className="detail-label">Phone</span>
+                    <a href={`tel:${selectedWork.clientPhone}`}>{selectedWork.clientPhone}</a>
+                  </div>
+                )}
+                {selectedWork.instructions && (
+                  <div className="detail-row">
+                    <span className="detail-label">Task</span>
+                    <span>{selectedWork.instructions}</span>
+                  </div>
+                )}
+                {selectedWork.clientAddress && (
+                  <a
+                    className="btn ghost full"
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedWork.clientAddress)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Navigate
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         )}
 

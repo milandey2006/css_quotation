@@ -18,6 +18,18 @@ export async function registerDevice(pairingCode) {
   return res.json(); // { deviceToken, employeeId, name }
 }
 
+export async function fetchAssignedWorks() {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/works`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to load jobs (${res.status})`);
+  }
+  return res.json(); // [{ id, clientName, clientPhone, clientAddress, instructions, status }]
+}
+
 export async function submitPunch({ type, clientName, areaName, workDetails, location }) {
   const token = await getToken();
   const res = await fetch(`${API_BASE_URL}/api/mobile/punch`, {

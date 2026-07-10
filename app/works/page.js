@@ -12,6 +12,7 @@ export default function WorksPage() {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
+  const [employees, setEmployees] = useState([]); // field staff who use the mobile app
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,6 +50,14 @@ export default function WorksPage() {
             if (Array.isArray(data)) setUsers(data);
         })
         .catch(err => console.error(err));
+
+    // Fetch field employees (mobile-app users) for the per-employee assignment
+    fetch('/api/employees')
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) setEmployees(data.filter(e => e.status !== 'inactive'));
+        })
+        .catch(err => console.error(err));
   }, []);
 
   // Punch State
@@ -70,6 +79,24 @@ export default function WorksPage() {
       } catch (err) {
           console.error(err);
           toast.error('Failed to assign user');
+      }
+  };
+
+  const assignEmployee = async (workId, employeeIds) => {
+      // Optimistic Update
+      setWorks(prev => prev.map(w => w.id === workId ? { ...w, employeeIds } : w));
+
+      try {
+          const res = await fetch(`/api/works/${workId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ employeeIds })
+          });
+          if (!res.ok) throw new Error('Failed to assign');
+          toast.success('Assigned to field staff');
+      } catch (err) {
+          console.error(err);
+          toast.error('Failed to assign employee');
       }
   };
 
@@ -451,6 +478,40 @@ export default function WorksPage() {
                                             })}
                                         </div>
                                     </div>
+
+                                    {/* Field-staff (mobile app) assignment */}
+                                    {isAdmin && (
+                                      <div className="mb-3">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Field staff (app)</p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {employees.map(e => {
+                                                const assignedIds = Array.isArray(work.employeeIds) ? work.employeeIds.map(Number) : [];
+                                                const isAssigned = assignedIds.includes(e.id);
+                                                return (
+                                                    <button
+                                                        key={e.id}
+                                                        onClick={() => {
+                                                            const newIds = isAssigned
+                                                                ? assignedIds.filter(id => id !== e.id)
+                                                                : [...assignedIds, e.id];
+                                                            assignEmployee(work.id, newIds);
+                                                        }}
+                                                        className={`text-[10px] px-1.5 py-0.5 rounded border transition-all ${
+                                                            isAssigned
+                                                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200 font-bold'
+                                                                : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                                                        }`}
+                                                    >
+                                                        {e.name}
+                                                    </button>
+                                                );
+                                            })}
+                                            {employees.length === 0 && (
+                                                <span className="text-[10px] text-slate-300">No employees found</span>
+                                            )}
+                                        </div>
+                                      </div>
+                                    )}
 
                                     {/* Punch Buttons */}
                                     <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 mb-2">

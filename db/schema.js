@@ -102,6 +102,10 @@ export const employees = pgTable('employees', {
   basicSalary: integer('basic_salary'),
   advanceBalance: integer('advance_balance').default(0),
   status: text('status').default('active'), // active, inactive
+  pairingCode: text('pairing_code'), // short-lived code shown to admin to hand to employee for mobile app setup
+  pairingCodeExpiresAt: timestamp('pairing_code_expires_at'),
+  deviceToken: text('device_token').unique(), // long-lived token the mobile app uses to authenticate as this employee
+  deviceTokenCreatedAt: timestamp('device_token_created_at'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -156,6 +160,17 @@ export const attendanceRemarks = pgTable('attendance_remarks', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+
+export const locationPings = pgTable('location_pings', {
+  id: serial('id').primaryKey(),
+  employeeId: integer('employee_id').notNull(), // references employees.id
+  lat: text('lat').notNull(),
+  lng: text('lng').notNull(),
+  accuracy: text('accuracy'),
+  battery: text('battery'),
+  recordedAt: timestamp('recorded_at').notNull(), // device clock, when the GPS fix was taken
+  createdAt: timestamp('created_at').defaultNow(),
+});
 
 export const worksheets = pgTable('worksheets', {
   id: serial('id').primaryKey(),

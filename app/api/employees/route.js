@@ -1,11 +1,34 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../db';
 import { employees } from '../../../db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const allEmployees = await db.select().from(employees).orderBy(desc(employees.createdAt));
+    // deviceToken/pairingCode are bearer secrets for the mobile app — never send the raw
+    // values to the browser, just a derived "paired" flag and non-secret timestamps.
+    const allEmployees = await db.select({
+      id: employees.id,
+      employeeCode: employees.employeeCode,
+      name: employees.name,
+      designation: employees.designation,
+      mobile: employees.mobile,
+      email: employees.email,
+      address: employees.address,
+      panNo: employees.panNo,
+      aadhaarNo: employees.aadhaarNo,
+      uanNo: employees.uanNo,
+      bankAccountNo: employees.bankAccountNo,
+      ifscCode: employees.ifscCode,
+      joinDate: employees.joinDate,
+      basicSalary: employees.basicSalary,
+      advanceBalance: employees.advanceBalance,
+      status: employees.status,
+      createdAt: employees.createdAt,
+      isPaired: sql`(${employees.deviceToken} is not null)`,
+      deviceTokenCreatedAt: employees.deviceTokenCreatedAt,
+      pairingCodeExpiresAt: employees.pairingCodeExpiresAt,
+    }).from(employees).orderBy(desc(employees.createdAt));
     return NextResponse.json(allEmployees);
   } catch (error) {
     console.error('Error fetching employees:', error);

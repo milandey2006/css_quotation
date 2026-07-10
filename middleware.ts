@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
     '/api/webhooks(.*)',
     '/share(.*)',
     '/api/public(.*)',
+    // Field-employee mobile app: authenticates via its own device bearer token, not a Clerk session.
+    '/api/mobile(.*)',
     // Pretty public-viewer URLs for shared documents, e.g. /quotation/dura-exports-css-jun-2026-261-a8f3k9b2.
     // Must exclude the "create" and list pages of each section, which stay behind auth.
     /^\/quotation\/(?!create\b)[^/]+\/?$/,

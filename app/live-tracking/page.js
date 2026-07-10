@@ -21,6 +21,11 @@ const LiveMap = dynamic(() => import('../components/LiveMap'), {
 // someone still on duty (see onDutyEmployees below for the full reasoning).
 const STALE_PUNCH_HOURS = 16;
 
+// A location ping (from the Android background-tracking app) older than this is
+// treated as stale and we fall back to the punch-in snapshot location instead.
+// Much tighter than STALE_PUNCH_HOURS since pings are meant to be near-real-time.
+const PING_STALE_MINUTES = 10;
+
 export default function LiveTrackingPage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
@@ -37,16 +42,21 @@ export default function LiveTrackingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [punches, setPunches] = useState([]);
+  const [livePings, setLivePings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const [focusedId, setFocusedId] = useState(null);
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/api/punch');
-      if (res.ok) setPunches(await res.json());
+      const [punchRes, pingRes] = await Promise.all([
+        fetch('/api/punch'),
+        fetch('/api/live-locations'),
+      ]);
+      if (punchRes.ok) setPunches(await punchRes.json());
+      if (pingRes.ok) setLivePings(await pingRes.json());
     } catch (error) {
-      console.error('Failed to fetch punches:', error);
+      console.error('Failed to fetch live tracking data:', error);
     } finally {
       setLoading(false);
     }
@@ -98,17 +108,46 @@ export default function LiveTrackingPage() {
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   }, [punches]);
 
+  // Latest ping per employee name, so it can be matched against punches.employeeId
+  // (a free-text name, not a foreign key -- see punches table comment history).
+  const pingsByName = useMemo(() => {
+    const map = {};
+    livePings.forEach(ping => { map[ping.employeeName] = ping; });
+    return map;
+  }, [livePings]);
+
   const mapPoints = useMemo(() => onDutyEmployees
-    .filter(p => p.location)
-    .map(p => ({
-      id: p.id,
-      employeeId: p.employeeId,
-      lat: p.location.lat,
-      lng: p.location.lng,
-      isOffice: isOffice(p),
-      clientName: p.clientName,
-      punchTimestamp: p.timestamp,
-    })), [onDutyEmployees]);
+    .map(p => {
+      const ping = pingsByName[p.employeeId];
+      const pingIsFresh = ping && (Date.now() - new Date(ping.recordedAt).getTime()) < PING_STALE_MINUTES * 60 * 1000;
+
+      if (pingIsFresh) {
+        return {
+          id: p.id,
+          employeeId: p.employeeId,
+          lat: Number(ping.lat),
+          lng: Number(ping.lng),
+          isOffice: isOffice(p),
+          clientName: p.clientName,
+          punchTimestamp: ping.recordedAt,
+          isLive: true,
+        };
+      }
+      if (p.location) {
+        return {
+          id: p.id,
+          employeeId: p.employeeId,
+          lat: p.location.lat,
+          lng: p.location.lng,
+          isOffice: isOffice(p),
+          clientName: p.clientName,
+          punchTimestamp: p.timestamp,
+          isLive: false,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean), [onDutyEmployees, pingsByName]);
 
   const focusPoint = mapPoints.find(m => m.id === focusedId) || null;
 
@@ -161,7 +200,7 @@ export default function LiveTrackingPage() {
                 Currently On Duty
               </p>
               <p className="text-[11px] text-slate-400 px-1 -mt-2">
-                Location shown is from punch-in, not continuously live
+                Live position from the tracking app when available, punch-in location otherwise
               </p>
 
               {loading ? (
@@ -173,7 +212,8 @@ export default function LiveTrackingPage() {
                 </div>
               ) : (
                 onDutyEmployees.map(p => {
-                  const hasPoint = mapPoints.some(pt => pt.id === p.id);
+                  const point = mapPoints.find(pt => pt.id === p.id);
+                  const hasPoint = !!point;
                   return (
                     <button
                       key={p.id}
@@ -189,7 +229,12 @@ export default function LiveTrackingPage() {
                         <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-white rounded-full ${isOffice(p) ? 'bg-emerald-500' : 'bg-indigo-500'}`}></span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-slate-900 text-sm truncate">{p.employeeId}</p>
+                        <p className="font-semibold text-slate-900 text-sm truncate flex items-center gap-1.5">
+                          {p.employeeId}
+                          {point?.isLive && (
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1 py-px tracking-wide">LIVE</span>
+                          )}
+                        </p>
                         <p className="text-xs text-slate-500 truncate">
                           {isOffice(p) ? 'Office' : (p.clientName || 'Client site')}
                         </p>

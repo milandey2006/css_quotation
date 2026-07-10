@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CSS Tracker</string>
+    <string name="title_activity_main">CSS Tracker</string>
+    <string name="package_name">com.championsecurity.tracker</string>
+    <string name="custom_url_scheme">com.championsecurity.tracker</string>
+</resources>

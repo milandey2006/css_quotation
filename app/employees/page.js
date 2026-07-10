@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Link from 'next/link';
-import { Menu, Plus, Users, Trash2, Edit, Save, X, UserX, UserCheck } from 'lucide-react';
+import { Menu, Plus, Users, Trash2, Edit, Save, X, UserX, UserCheck, Smartphone, Unlink } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -18,6 +18,8 @@ export default function EmployeesPage() {
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [editingId, setEditingId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
+  const [unpairModal, setUnpairModal] = useState({ isOpen: false, id: null, name: '' });
+  const [pairingModal, setPairingModal] = useState({ isOpen: false, name: '', code: '', expiresAt: null });
   const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'inactive' | 'all'
   const [formData, setFormData] = useState({
       name: '',
@@ -152,6 +154,30 @@ export default function EmployeesPage() {
       }
   };
 
+  const handleGeneratePairingCode = async (emp) => {
+      try {
+          const res = await fetch(`/api/employees/${emp.id}/pairing-code`, { method: 'POST' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed');
+          setPairingModal({ isOpen: true, name: emp.name, code: data.pairingCode, expiresAt: data.pairingCodeExpiresAt });
+      } catch (error) {
+          console.error(error);
+          toast.error('Failed to generate pairing code');
+      }
+  };
+
+  const handleUnpair = async (id) => {
+      try {
+          const res = await fetch(`/api/employees/${id}/pairing-code`, { method: 'DELETE' });
+          if (!res.ok) throw new Error();
+          toast.success('Device unpaired');
+          fetchEmployees();
+      } catch (error) {
+          console.error(error);
+          toast.error('Failed to unpair device');
+      }
+  };
+
   const resetForm = () => {
       setEditingId(null);
       setFormData({  name: '', designation: '', mobile: '', email: '', address: '', panNo: '', aadhaarNo: '', uanNo: '', bankAccountNo: '', ifscCode: '', joinDate: '', basicSalary: 0, advanceBalance: 0, status: 'active' });
@@ -254,6 +280,7 @@ export default function EmployeesPage() {
                                         <th className="px-6 py-4">Join Date</th>
                                         <th className="px-6 py-4">Adv. Balance</th>
                                         <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4">Device</th>
                                         <th className="px-6 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -283,8 +310,28 @@ export default function EmployeesPage() {
                                                     {isInactive ? 'Inactive' : 'Active'}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4">
+                                                {emp.isPaired ? (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">
+                                                        <Smartphone className="w-3 h-3" /> Paired
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-slate-100 text-slate-500 border-slate-200">
+                                                        Not paired
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => emp.isPaired
+                                                            ? setUnpairModal({ isOpen: true, id: emp.id, name: emp.name })
+                                                            : handleGeneratePairingCode(emp)}
+                                                        className={`p-2 rounded-lg transition-colors ${emp.isPaired ? 'text-slate-500 hover:bg-slate-100' : 'text-indigo-600 hover:bg-indigo-50'}`}
+                                                        title={emp.isPaired ? 'Unpair mobile device' : 'Generate pairing code for mobile app'}
+                                                    >
+                                                        {emp.isPaired ? <Unlink className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
+                                                    </button>
                                                     <button
                                                         onClick={() => toggleEmployeeStatus(emp)}
                                                         className={`p-2 rounded-lg transition-colors ${
@@ -395,7 +442,7 @@ export default function EmployeesPage() {
                                     )}
                                 </div>
                               </main>
-                              <ConfirmModal 
+                              <ConfirmModal
                                 isOpen={confirmModal.isOpen}
                                 onClose={() => setConfirmModal({ isOpen: false, id: null })}
                                 onConfirm={() => {
@@ -404,9 +451,53 @@ export default function EmployeesPage() {
                                 title="Delete Employee"
                                 message="Are you sure you want to permanently delete this employee? This action cannot be undone."
                               />
+                              <ConfirmModal
+                                isOpen={unpairModal.isOpen}
+                                onClose={() => setUnpairModal({ isOpen: false, id: null, name: '' })}
+                                onConfirm={() => {
+                                    if (unpairModal.id) handleUnpair(unpairModal.id);
+                                }}
+                                title="Unpair Mobile Device"
+                                message={`This will disconnect ${unpairModal.name || 'this employee'}'s phone from live tracking. They'll need a new pairing code to reconnect.`}
+                              />
+                              <PairingCodeModal
+                                isOpen={pairingModal.isOpen}
+                                onClose={() => setPairingModal({ isOpen: false, name: '', code: '', expiresAt: null })}
+                                name={pairingModal.name}
+                                code={pairingModal.code}
+                                expiresAt={pairingModal.expiresAt}
+                              />
                             </div>
                           );
                         }
+
+const PairingCodeModal = ({ isOpen, onClose, name, code, expiresAt }) => {
+    if (!isOpen) return null;
+    const expiresLabel = expiresAt ? new Date(expiresAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+                <div className="p-6 text-center">
+                    <div className="flex justify-end -mt-2 -mr-2">
+                        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <p className="text-sm text-slate-500 mb-1">Pairing code for</p>
+                    <p className="font-bold text-slate-900 mb-4">{name}</p>
+                    <div className="text-4xl font-mono font-bold tracking-widest text-indigo-600 bg-indigo-50 rounded-xl py-4 mb-4">
+                        {code}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                        Read this to the employee to enter in the Champion Security app.
+                        Valid until {expiresLabel} (15 minutes).
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const Input = ({ label, onChange, ...props }) => (
     <div>

@@ -30,6 +30,35 @@ export async function fetchAssignedWorks() {
   return res.json(); // [{ id, clientName, clientPhone, clientAddress, instructions, status }]
 }
 
+export async function fetchExpenses() {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/expenses`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to load expenses (${res.status})`);
+  }
+  return res.json(); // [{ id, category, amount, date, purpose, status, hasPhoto }]
+}
+
+export async function submitExpense({ category, amount, purpose, date, photoBase64 }) {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/expenses`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ category, amount, purpose, date, photoBase64 }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to save expense (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function fetchPunchHistory() {
   const token = await getToken();
   const res = await fetch(`${API_BASE_URL}/api/mobile/punches`, {

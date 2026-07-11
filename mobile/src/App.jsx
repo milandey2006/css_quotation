@@ -4,6 +4,9 @@ import { startTracking, stopTracking } from './lib/tracker';
 import PairingScreen from './screens/PairingScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
 import HistoryScreen from './screens/HistoryScreen.jsx';
+import ExpensesScreen from './screens/ExpensesScreen.jsx';
+
+const TITLES = { home: 'Attendance', history: 'My History', expenses: 'My Expenses' };
 
 function PairedApp({ name, onUnpair }) {
   const [view, setView] = useState('home'); // 'home' | 'history'
@@ -29,7 +32,7 @@ function PairedApp({ name, onUnpair }) {
           <span />
           <span />
         </button>
-        <span className="appbar-title">{view === 'home' ? 'Attendance' : 'My History'}</span>
+        <span className="appbar-title">{TITLES[view] || 'Attendance'}</span>
         <span className="appbar-spacer" />
       </header>
 
@@ -49,6 +52,9 @@ function PairedApp({ name, onUnpair }) {
             <button className={`drawer-item ${view === 'history' ? 'active' : ''}`} onClick={() => go('history')}>
               My History
             </button>
+            <button className={`drawer-item ${view === 'expenses' ? 'active' : ''}`} onClick={() => go('expenses')}>
+              My Expenses
+            </button>
             <div className="drawer-spacer" />
             <button className="drawer-item danger" onClick={handleUnpair}>
               Unpair device
@@ -57,7 +63,11 @@ function PairedApp({ name, onUnpair }) {
         </div>
       )}
 
-      <div className="app-body">{view === 'home' ? <HomeScreen /> : <HistoryScreen />}</div>
+      <div className="app-body">
+        {view === 'home' && <HomeScreen />}
+        {view === 'history' && <HistoryScreen />}
+        {view === 'expenses' && <ExpensesScreen />}
+      </div>
     </div>
   );
 }

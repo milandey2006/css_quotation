@@ -151,6 +151,8 @@ export const expenses = pgTable('expenses', {
   date: text('date').notNull(), // YYYY-MM-DD
   purpose: text('purpose'), // free-text reason/note
   status: text('status').default('pending'), // pending | settled (meaning depends on type: deducted-from-salary for 'given', or remitted-to-company for 'collected')
+  receiptPhotoUrl: text('receipt_photo_url'), // optional proof photo (Vercel Blob); auto-deleted ~10 days after creation by the cron cleanup
+  source: text('source').default('admin'), // 'admin' (entered on dashboard) | 'employee' (logged from the mobile app)
   createdAt: timestamp('created_at').defaultNow(),
 });
 

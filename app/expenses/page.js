@@ -154,6 +154,11 @@ export default function ExpensesPage() {
             {(e.employeeName || '?').charAt(0).toUpperCase()}
           </div>
           <span className="font-medium text-slate-800">{e.employeeName}</span>
+          {e.source === 'employee' && (
+            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1 py-px uppercase tracking-wide" title="Logged by the employee from the mobile app">
+              App
+            </span>
+          )}
         </div>
       ),
     },
@@ -171,7 +176,16 @@ export default function ExpensesPage() {
     },
     {
       key: 'purpose', label: 'Purpose', mobile: 'meta',
-      render: (e) => <span className="text-slate-600 truncate max-w-[220px] block" title={e.purpose}>{e.purpose || '-'}</span>,
+      render: (e) => (
+        <div className="flex items-center gap-2">
+          {e.receiptPhotoUrl && (
+            <a href={e.receiptPhotoUrl} target="_blank" rel="noopener noreferrer" title="Receipt photo — tap to enlarge" className="flex-shrink-0">
+              <img src={e.receiptPhotoUrl} alt="Receipt" className="w-8 h-8 rounded object-cover border border-slate-200" />
+            </a>
+          )}
+          <span className="text-slate-600 truncate max-w-[200px] block" title={e.purpose}>{e.purpose || '-'}</span>
+        </div>
+      ),
     },
     {
       key: 'amount', label: 'Amount', mobile: 'highlight', align: 'right',

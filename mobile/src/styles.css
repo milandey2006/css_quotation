@@ -569,6 +569,87 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
+/* Expenses */
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 14px 0 6px;
+}
+.submit-gap {
+  margin-top: 18px;
+}
+.expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.expense-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.expense-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.expense-cat {
+  font-weight: 700;
+  font-size: 15px;
+}
+.clip {
+  color: var(--muted);
+  font-size: 12px;
+}
+.expense-note {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.expense-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.expense-amt {
+  font-weight: 800;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.expense-status {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 7px;
+  border-radius: 6px;
+}
+.expense-status.pending {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fde047;
+}
+.expense-status.settled {
+  background: rgba(5, 150, 105, 0.2);
+  color: #6ee7b7;
+}
+.expense-date {
+  font-size: 11px;
+  color: var(--dim);
+}
+
 .spinner {
   width: 36px;
   height: 36px;

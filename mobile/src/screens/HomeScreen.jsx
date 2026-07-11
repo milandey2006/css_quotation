@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { submitPunch, fetchAssignedWorks } from '../lib/api';
 import { setOnDuty, setPunchState, getPunchState } from '../lib/storage';
 import { startTracking, stopTracking } from '../lib/tracker';
@@ -19,6 +20,24 @@ export default function HomeScreen() {
   const [worksLoading, setWorksLoading] = useState(false);
   const [worksError, setWorksError] = useState('');
   const [selectedWorkId, setSelectedWorkId] = useState(null);
+  const [photo, setPhoto] = useState(null); // base64 completion photo (optional)
+
+  const takePhoto = async () => {
+    try {
+      const img = await Camera.getPhoto({
+        quality: 55,
+        width: 1024,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera, // force a live photo, not the gallery
+      });
+      if (img?.base64String) setPhoto(img.base64String);
+    } catch (e) {
+      // User cancelled the camera, or permission denied — photo is optional, so
+      // just carry on without one.
+      console.log('Photo capture cancelled/failed:', e?.message);
+    }
+  };
 
   useEffect(() => {
     getPunchState().then(setPunchInfo);
@@ -85,6 +104,8 @@ export default function HomeScreen() {
           : selectedWork.instructions || `Client Punch ${type === 'in' ? 'In' : 'Out'} for ${selectedWork.clientName}`,
         location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
         workId: isOffice ? undefined : selectedWork.id,
+        // Completion photo only applies to a client punch-out.
+        photoBase64: !isOffice && type === 'out' ? photo : undefined,
       });
 
       if (type === 'in') await startShiftTracking();
@@ -101,6 +122,7 @@ export default function HomeScreen() {
       // A punch-out marks the job Done server-side, so it drops off this list.
       if (!isOffice && type === 'out') {
         setSelectedWorkId(null);
+        setPhoto(null);
         loadWorks();
       }
     } catch (err) {
@@ -175,7 +197,10 @@ export default function HomeScreen() {
                   <button
                     key={w.id}
                     className={`work-item ${selectedWorkId === w.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedWorkId(w.id)}
+                    onClick={() => {
+                      setSelectedWorkId(w.id);
+                      setPhoto(null);
+                    }}
                   >
                     <span className="work-name">{w.clientName}</span>
                     {w.clientAddress && <span className="work-addr">{w.clientAddress}</span>}
@@ -213,6 +238,20 @@ export default function HomeScreen() {
                   >
                     Navigate
                   </a>
+                )}
+
+                {/* Optional proof-of-work photo, attached when they punch OUT. */}
+                {photo ? (
+                  <div className="photo-preview">
+                    <img src={`data:image/jpeg;base64,${photo}`} alt="Completion" />
+                    <button className="btn ghost small" onClick={() => setPhoto(null)}>
+                      Remove photo
+                    </button>
+                  </div>
+                ) : (
+                  <button className="btn ghost full" onClick={takePhoto}>
+                    📷 Add completion photo (optional)
+                  </button>
                 )}
               </div>
             )}

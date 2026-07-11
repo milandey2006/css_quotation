@@ -456,6 +456,26 @@ export default function WorksPage() {
                                         )}
                                     </div>
 
+                                    {/* Completion photo captured by the field employee at punch-out */}
+                                    {work.completionPhotoUrl && (
+                                        <a
+                                            href={work.completionPhotoUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block mb-3 group/photo"
+                                            title="Completion photo — tap to enlarge"
+                                        >
+                                            <img
+                                                src={work.completionPhotoUrl}
+                                                alt="Job completion"
+                                                className="w-full h-28 object-cover rounded-lg border border-slate-200"
+                                            />
+                                            <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                                <MapPin className="w-3 h-3" /> Completion photo — tap to enlarge
+                                            </span>
+                                        </a>
+                                    )}
+
                                     {/* Field-staff (mobile app) assignment — the only assignment that
                                         drives the phone app. (The old Clerk-user "blue" row was removed.) */}
                                     {isAdmin && (

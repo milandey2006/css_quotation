@@ -48,6 +48,7 @@ export const works = pgTable('works', {
   userId: text('user_id'), // Clerk User ID - DEPRECATED
   userIds: jsonb('user_ids'), // Array of Clerk User IDs (office staff with a web login)
   employeeIds: jsonb('employee_ids').default([]), // Array of employees.id — field staff who use the mobile app (no Clerk login)
+  completionPhotoUrl: text('completion_photo_url'), // optional proof-of-work photo captured at client punch-out (Vercel Blob URL)
   status: text('status').default('pending'), // pending, completed
   createdAt: timestamp('created_at').defaultNow(),
 });

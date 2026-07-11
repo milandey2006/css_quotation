@@ -38,4 +38,7 @@
          fine/coarse location, foreground-service, and notification permissions,
          but this one must be declared by the app itself. -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Optional completion photo at client punch-out (@capacitor/camera). -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>

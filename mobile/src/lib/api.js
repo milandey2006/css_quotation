@@ -42,7 +42,7 @@ export async function fetchPunchHistory() {
   return res.json(); // [{ id, type, clientName, areaName, timestamp, workDetails }]
 }
 
-export async function submitPunch({ type, clientName, areaName, workDetails, location, workId }) {
+export async function submitPunch({ type, clientName, areaName, workDetails, location, workId, photoBase64 }) {
   const token = await getToken();
   const res = await fetch(`${API_BASE_URL}/api/mobile/punch`, {
     method: 'POST',
@@ -50,7 +50,7 @@ export async function submitPunch({ type, clientName, areaName, workDetails, loc
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ type, clientName, areaName, workDetails, location, workId }),
+    body: JSON.stringify({ type, clientName, areaName, workDetails, location, workId, photoBase64 }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

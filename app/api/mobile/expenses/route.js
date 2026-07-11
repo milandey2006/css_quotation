@@ -96,6 +96,11 @@ export async function POST(request) {
       date: inserted.date,
       status: inserted.status,
       hasPhoto: !!inserted.receiptPhotoUrl,
+      // So the app can warn the employee when a photo was taken but storage
+      // rejected it (e.g. BLOB_READ_WRITE_TOKEN not configured), instead of
+      // silently dropping it.
+      photoProvided: !!photoBase64,
+      photoSaved: !!receiptPhotoUrl,
     });
   } catch (error) {
     console.error('Error creating mobile expense:', error);

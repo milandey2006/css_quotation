@@ -56,14 +56,23 @@ export default function ExpensesScreen() {
     setSubmitting(true);
     setMsg(null);
     try {
-      await submitExpense({
+      const result = await submitExpense({
         category,
         amount: Number(amount),
         purpose,
         date: new Date().toISOString().split('T')[0],
         photoBase64: photo || undefined,
       });
-      setMsg({ type: 'success', text: 'Expense submitted for reimbursement.' });
+      // If a photo was attached but storage rejected it, tell the employee
+      // rather than pretending it saved.
+      if (photo && result && result.photoSaved === false) {
+        setMsg({
+          type: 'error',
+          text: 'Expense saved, but the photo could not be uploaded. Please inform the office.',
+        });
+      } else {
+        setMsg({ type: 'success', text: 'Expense submitted for reimbursement.' });
+      }
       setAmount('');
       setPurpose('');
       setPhoto(null);

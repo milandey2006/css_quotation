@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getToken, getName, getOnDuty, clearSession } from './lib/storage';
 import { startTracking, stopTracking } from './lib/tracker';
+import { checkForUpdate } from './lib/update';
 import PairingScreen from './screens/PairingScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
 import HistoryScreen from './screens/HistoryScreen.jsx';
@@ -9,8 +10,13 @@ import ExpensesScreen from './screens/ExpensesScreen.jsx';
 const TITLES = { home: 'Attendance', history: 'My History', expenses: 'My Expenses' };
 
 function PairedApp({ name, onUnpair }) {
-  const [view, setView] = useState('home'); // 'home' | 'history'
+  const [view, setView] = useState('home'); // 'home' | 'history' | 'expenses'
   const [menuOpen, setMenuOpen] = useState(false);
+  const [update, setUpdate] = useState(null); // { url, versionName } when a newer build exists
+
+  useEffect(() => {
+    checkForUpdate().then(setUpdate);
+  }, []);
 
   const go = (v) => {
     setView(v);
@@ -35,6 +41,12 @@ function PairedApp({ name, onUnpair }) {
         <span className="appbar-title">{TITLES[view] || 'Attendance'}</span>
         <span className="appbar-spacer" />
       </header>
+
+      {update && (
+        <a className="update-banner" href={update.url} target="_blank" rel="noreferrer">
+          🔄 A new version is available — tap here to update
+        </a>
+      )}
 
       {menuOpen && (
         <div className="drawer-overlay" onClick={() => setMenuOpen(false)}>

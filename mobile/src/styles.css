@@ -415,6 +415,21 @@ body,
   padding-top: 16px;
 }
 
+.update-banner {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--blue);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+.update-banner:active {
+  background: var(--blue-hover);
+}
+
 .drawer-overlay {
   position: fixed;
   inset: 0;

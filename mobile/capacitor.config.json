@@ -1,6 +1,6 @@
 {
   "appId": "com.championsecurity.tracker",
-  "appName": "CSS Tracker",
+  "appName": "CSS",
   "webDir": "dist",
   "plugins": {
     "CapacitorHttp": {

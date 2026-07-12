@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getToken, getName, getOnDuty, clearSession } from './lib/storage';
 import { startTracking, stopTracking } from './lib/tracker';
-import { checkForUpdate } from './lib/update';
+import { checkForUpdate, getAppVersion } from './lib/update';
 import PairingScreen from './screens/PairingScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
 import HistoryScreen from './screens/HistoryScreen.jsx';
@@ -13,9 +13,11 @@ function PairedApp({ name, onUnpair }) {
   const [view, setView] = useState('home'); // 'home' | 'history' | 'expenses'
   const [menuOpen, setMenuOpen] = useState(false);
   const [update, setUpdate] = useState(null); // { url, versionName } when a newer build exists
+  const [appVersion, setAppVersion] = useState('');
 
   useEffect(() => {
     checkForUpdate().then(setUpdate);
+    getAppVersion().then(setAppVersion);
   }, []);
 
   const go = (v) => {
@@ -71,6 +73,7 @@ function PairedApp({ name, onUnpair }) {
             <button className="drawer-item danger" onClick={handleUnpair}>
               Unpair device
             </button>
+            <div className="drawer-version">CSS · v{appVersion || '—'}</div>
           </div>
         </div>
       )}

@@ -5,6 +5,16 @@ import { API_BASE_URL } from '../config';
 // { url, versionName } when a newer version is available, else null. Fully
 // best-effort — any failure (offline, web preview, etc.) just returns null so
 // the app carries on normally.
+// The installed app's version name (e.g. "1.2"), for display. '' if unavailable.
+export async function getAppVersion() {
+  try {
+    const info = await CapApp.getInfo();
+    return info.version || '';
+  } catch {
+    return '';
+  }
+}
+
 export async function checkForUpdate() {
   try {
     const info = await CapApp.getInfo(); // { version, build } — build = Android versionCode

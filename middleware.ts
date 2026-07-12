@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
     '/api/webhooks(.*)',
     '/share(.*)',
     '/api/public(.*)',
+    // Public APK download for field employees to install the mobile app.
+    '/downloads(.*)',
     // Field-employee mobile app: authenticates via its own device bearer token, not a Clerk session.
     '/api/mobile(.*)',
     // Scheduled cleanup jobs invoked by Vercel Cron (no Clerk session); guarded by CRON_SECRET.

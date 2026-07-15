@@ -42,6 +42,8 @@ export default function ExpensesPage() {
   const [typeFilter, setTypeFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
@@ -105,8 +107,16 @@ export default function ExpensesPage() {
     const matchesType = typeFilter === 'All' || e.type === typeFilter;
     const matchesCategory = categoryFilter === 'All' || e.category === categoryFilter;
     const matchesStatus = statusFilter === 'All' || e.status === statusFilter;
-    return matchesSearch && matchesType && matchesCategory && matchesStatus;
-  }), [expenses, searchTerm, typeFilter, categoryFilter, statusFilter]);
+    // e.date is a plain 'YYYY-MM-DD' string, so lexicographic comparison is
+    // already chronological -- no Date parsing/timezone issues. Filling only
+    // "From" picks that single date; filling both makes it a range.
+    const matchesDate =
+      dateFrom && dateTo ? e.date >= dateFrom && e.date <= dateTo :
+      dateFrom ? e.date === dateFrom :
+      dateTo ? e.date <= dateTo :
+      true;
+    return matchesSearch && matchesType && matchesCategory && matchesStatus && matchesDate;
+  }), [expenses, searchTerm, typeFilter, categoryFilter, statusFilter, dateFrom, dateTo]);
 
   const totals = useMemo(() => {
     const now = new Date();
@@ -296,9 +306,28 @@ export default function ExpensesPage() {
             <option value="pending">Pending</option>
             <option value="settled">Settled</option>
           </select>
-          {(searchTerm || typeFilter !== 'All' || categoryFilter !== 'All' || statusFilter !== 'All') && (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              max={dateTo || undefined}
+              title="From date (leave To empty to search a single date)"
+              className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            />
+            <span className="text-slate-400 text-sm">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              min={dateFrom || undefined}
+              title="To date (optional -- leave empty to search a single date)"
+              className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+            />
+          </div>
+          {(searchTerm || typeFilter !== 'All' || categoryFilter !== 'All' || statusFilter !== 'All' || dateFrom || dateTo) && (
             <button
-              onClick={() => { setSearchTerm(''); setTypeFilter('All'); setCategoryFilter('All'); setStatusFilter('All'); }}
+              onClick={() => { setSearchTerm(''); setTypeFilter('All'); setCategoryFilter('All'); setStatusFilter('All'); setDateFrom(''); setDateTo(''); }}
               className="text-xs text-red-500 hover:text-red-700 font-medium px-2 self-center"
             >
               Clear Filters

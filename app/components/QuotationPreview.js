@@ -192,6 +192,7 @@ const QuotationPreview = ({ data }) => {
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/TPLINK_Logo_2.svg/1280px-TPLINK_Logo_2.svg.png" alt="TP-Link" className="h-8 object-contain" />
                 <img src="https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Netgear.png" alt="Netgear" className="h-3 object-contain" />
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Bosch-logo.svg/1280px-Bosch-logo.svg.png" alt="Bosch" className="h-7 object-contain" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/27/Ajax_system.png" alt="Ajax" className="h-7 object-contain" />
                 <img src="https://upload.wikimedia.org/wikipedia/commons/7/7d/Mantra_Softech.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Mantra" className="h-6 object-contain" />
                 <img src="https://www.nit.ae/wp-content/uploads/2022/11/MS_logo_CBlue_CMYK-1-1024x212.png" alt="Milestone" className="h-5 object-contain" />
                 <img src="https://www.networkoptix.com/hs-fs/hubfs/nx.jpg?width=800&height=245&name=nx.jpg" alt="network-optix" className="h-10 object-contain" />

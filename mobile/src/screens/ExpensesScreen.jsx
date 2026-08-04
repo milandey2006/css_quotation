@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { fetchExpenses, submitExpense } from '../lib/api';
+import { fetchExpenses, submitExpense, editExpense } from '../lib/api';
 
 const CATEGORIES = ['Conveyance', 'Fuel', 'Food', 'Tools', 'Other'];
 
@@ -15,6 +15,7 @@ export default function ExpensesScreen() {
   const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState(null); // { type, text }
+  const [editingId, setEditingId] = useState(null); // expense id currently being edited, or null = adding new
 
   const [items, setItems] = useState([]);
   const [listStatus, setListStatus] = useState('loading'); // loading | done | error
@@ -48,6 +49,24 @@ export default function ExpensesScreen() {
     }
   };
 
+  const resetForm = () => {
+    setEditingId(null);
+    setCategory('Conveyance');
+    setAmount('');
+    setPurpose('');
+    setPhoto(null);
+  };
+
+  const startEdit = (item) => {
+    if (item.status !== 'pending') return; // settled expenses are locked
+    setEditingId(item.id);
+    setCategory(item.category);
+    setAmount(String(item.amount));
+    setPurpose(item.purpose || '');
+    setPhoto(null);
+    setMsg(null);
+  };
+
   const submit = async () => {
     if (!amount || Number(amount) <= 0) {
       setMsg({ type: 'error', text: 'Enter a valid amount.' });
@@ -56,29 +75,33 @@ export default function ExpensesScreen() {
     setSubmitting(true);
     setMsg(null);
     try {
-      const result = await submitExpense({
-        category,
-        amount: Number(amount),
-        purpose,
-        date: new Date().toISOString().split('T')[0],
-        photoBase64: photo || undefined,
-      });
-      // If a photo was attached but storage rejected it, tell the employee
-      // rather than pretending it saved.
-      if (photo && result && result.photoSaved === false) {
-        setMsg({
-          type: 'error',
-          text: 'Expense saved, but the photo could not be uploaded. Please inform the office.',
-        });
+      if (editingId) {
+        await editExpense(editingId, { category, amount: Number(amount), purpose });
+        setMsg({ type: 'success', text: 'Expense updated.' });
+        resetForm();
       } else {
-        setMsg({ type: 'success', text: 'Expense submitted for reimbursement.' });
+        const result = await submitExpense({
+          category,
+          amount: Number(amount),
+          purpose,
+          date: new Date().toISOString().split('T')[0],
+          photoBase64: photo || undefined,
+        });
+        // If a photo was attached but storage rejected it, tell the employee
+        // rather than pretending it saved.
+        if (photo && result && result.photoSaved === false) {
+          setMsg({
+            type: 'error',
+            text: 'Expense saved, but the photo could not be uploaded. Please inform the office.',
+          });
+        } else {
+          setMsg({ type: 'success', text: 'Expense submitted for reimbursement.' });
+        }
+        resetForm();
       }
-      setAmount('');
-      setPurpose('');
-      setPhoto(null);
       load();
     } catch (err) {
-      setMsg({ type: 'error', text: err.message || 'Could not submit expense.' });
+      setMsg({ type: 'error', text: err.message || 'Could not save expense.' });
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +110,7 @@ export default function ExpensesScreen() {
   return (
     <div className="screen">
       <div className="card">
-        <h2>Add Expense</h2>
+        <h2>{editingId ? 'Edit Expense' : 'Add Expense'}</h2>
 
         <label className="field-label">Category</label>
         <select className="text-input" value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -116,22 +139,34 @@ export default function ExpensesScreen() {
           onChange={(e) => setPurpose(e.target.value)}
         />
 
-        {photo ? (
-          <div className="photo-preview">
-            <img src={`data:image/jpeg;base64,${photo}`} alt="Receipt" />
-            <button className="btn ghost small" onClick={() => setPhoto(null)}>
-              Remove photo
+        {!editingId &&
+          (photo ? (
+            <div className="photo-preview">
+              <img src={`data:image/jpeg;base64,${photo}`} alt="Receipt" />
+              <button className="btn ghost small" onClick={() => setPhoto(null)}>
+                Remove photo
+              </button>
+            </div>
+          ) : (
+            <button className="btn ghost full" onClick={takePhoto}>
+              📷 Add receipt photo (optional)
             </button>
-          </div>
-        ) : (
-          <button className="btn ghost full" onClick={takePhoto}>
-            📷 Add receipt photo (optional)
-          </button>
-        )}
+          ))}
 
-        <button className="btn primary full submit-gap" onClick={submit} disabled={submitting}>
-          {submitting ? 'Submitting…' : 'Submit Expense'}
-        </button>
+        <div className={editingId ? 'punch-grid submit-gap' : ''}>
+          {editingId && (
+            <button className="btn ghost" onClick={resetForm} disabled={submitting}>
+              Cancel
+            </button>
+          )}
+          <button
+            className={editingId ? 'btn primary' : 'btn primary full submit-gap'}
+            onClick={submit}
+            disabled={submitting}
+          >
+            {submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Submit Expense'}
+          </button>
+        </div>
 
         {msg && <div className={`alert ${msg.type === 'error' ? 'error' : 'success'}`}>{msg.text}</div>}
       </div>
@@ -151,24 +186,33 @@ export default function ExpensesScreen() {
           <p className="hint tight">No expenses logged yet.</p>
         ) : (
           <div className="expense-list">
-            {items.map((e) => (
-              <div key={e.id} className="expense-row">
-                <div className="expense-main">
-                  <span className="expense-cat">
-                    {e.category}
-                    {e.hasPhoto && <span className="clip"> 📎</span>}
-                  </span>
-                  {e.purpose ? <span className="expense-note">{e.purpose}</span> : null}
-                </div>
-                <div className="expense-right">
-                  <span className="expense-amt">₹{e.amount}</span>
-                  <span className={`expense-status ${e.status === 'settled' ? 'settled' : 'pending'}`}>
-                    {e.status === 'settled' ? 'Settled' : 'Pending'}
-                  </span>
-                  <span className="expense-date">{fmtDate(e.date)}</span>
-                </div>
-              </div>
-            ))}
+            {items.map((e) => {
+              const editable = e.status === 'pending';
+              return (
+                <button
+                  key={e.id}
+                  className={`expense-row ${editable ? 'editable' : ''} ${editingId === e.id ? 'selected' : ''}`}
+                  onClick={() => startEdit(e)}
+                  disabled={!editable}
+                >
+                  <div className="expense-main">
+                    <span className="expense-cat">
+                      {e.category}
+                      {e.hasPhoto && <span className="clip"> 📎</span>}
+                    </span>
+                    {e.purpose ? <span className="expense-note">{e.purpose}</span> : null}
+                  </div>
+                  <div className="expense-right">
+                    <span className="expense-amt">₹{e.amount}</span>
+                    <span className={`expense-status ${e.status === 'settled' ? 'settled' : 'pending'}`}>
+                      {e.status === 'settled' ? 'Settled' : 'Pending'}
+                      {editable && <span className="edit-hint"> ✏️</span>}
+                    </span>
+                    <span className="expense-date">{fmtDate(e.date)}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

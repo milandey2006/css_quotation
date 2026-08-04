@@ -42,6 +42,23 @@ export async function fetchExpenses() {
   return res.json(); // [{ id, category, amount, date, purpose, status, hasPhoto }]
 }
 
+export async function editExpense(id, { category, amount, purpose }) {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/expenses/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ category, amount, purpose }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to update expense (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function submitExpense({ category, amount, purpose, date, photoBase64 }) {
   const token = await getToken();
   const res = await fetch(`${API_BASE_URL}/api/mobile/expenses`, {

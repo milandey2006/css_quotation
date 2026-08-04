@@ -7,14 +7,16 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend, color }) => {
     blue: "bg-blue-500",
     orange: "bg-orange-500",
     green: "bg-emerald-500",
-    purple: "bg-purple-500"
+    purple: "bg-purple-500",
+    amber: "bg-amber-500"
   };
 
   const bgStyles = {
      blue: "from-blue-500 to-blue-600",
      orange: "from-orange-500 to-orange-600",
      green: "from-emerald-500 to-emerald-600",
-     purple: "from-purple-500 to-purple-600"
+     purple: "from-purple-500 to-purple-600",
+     amber: "from-amber-500 to-amber-600"
   }
 
   return (
@@ -44,43 +46,55 @@ export const DashboardStats = ({ quotations }) => {
     .filter(q => q.status === 'Converted')
     .reduce((acc, q) => acc + (q.totalAmount || 0), 0);
 
-  // Loss logic: 'Lost' quotes count as loss
+  // Loss logic: 'Lost' quotes count as loss (displayed as "Cancelled")
   const totalLoss = quotations
     .filter(q => q.status === 'Lost')
     .reduce((acc, q) => acc + (q.totalAmount || 0), 0);
+
+  // Open logic: quotes that haven't been decided yet (pending / active, i.e. not Converted or Lost)
+  const openQuotations = quotations.filter(q => q.status !== 'Converted' && q.status !== 'Lost');
+  const openCount = openQuotations.length;
+  const openValue = openQuotations.reduce((acc, q) => acc + (q.totalAmount || 0), 0);
 
   const convertedCount = quotations.filter(q => q.status === 'Converted').length;
   const lostCount = quotations.filter(q => q.status === 'Lost').length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <StatCard 
-        title="Total Revenue" 
-        value={`₹${totalRevenue.toLocaleString('en-IN')}`} 
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <StatCard
+        title="Total Revenue"
+        value={`₹${totalRevenue.toLocaleString('en-IN')}`}
         subtext="Value of converted deals"
         icon={IndianRupee}
         color="blue"
       />
-      <StatCard 
-        title="Total Quotations" 
-        value={totalQuotations} 
+      <StatCard
+        title="Total Quotations"
+        value={totalQuotations}
         subtext="All generated quotes"
         icon={FileText}
         color="orange"
       />
-       <StatCard 
-        title="Converted" 
-        value={convertedCount} 
+       <StatCard
+        title="Converted"
+        value={convertedCount}
         subtext="Successfully closed deals"
         icon={CheckCircle}
         color="green"
       />
-      <StatCard 
-        title="Total Loss" 
-        value={`₹${totalLoss.toLocaleString('en-IN')}`} 
-        subtext={`${lostCount} lost deals`}
-        icon={ArrowDownRight} // Changed icon to represent loss/downward
-        color="purple" // or red? Keeping purple for consistency or changing to red. usage of red might be too alarming, but accurate for loss. Let's stick to purple or use Red if defined.
+      <StatCard
+        title="Open Quotation"
+        value={openCount}
+        subtext={`₹${openValue.toLocaleString('en-IN')} pending & active`}
+        icon={Clock}
+        color="amber"
+      />
+      <StatCard
+        title="Cancelled Quotation"
+        value={`₹${totalLoss.toLocaleString('en-IN')}`}
+        subtext={`${lostCount} cancelled deals`}
+        icon={ArrowDownRight}
+        color="purple"
       />
     </div>
   );

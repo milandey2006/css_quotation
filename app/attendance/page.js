@@ -128,9 +128,12 @@ export default function AttendancePage() {
 
       let hours = '0h 0m';
       let status = 'Absent';
+      let isLate = false;
 
       if (firstInPunch) {
         status = 'Working';
+        const inTime = new Date(firstInPunch.timestamp);
+        isLate = (inTime.getHours() * 60 + inTime.getMinutes()) > (10 * 60); // after 10:00 AM
         if (lastOutPunch && new Date(lastOutPunch.timestamp) > new Date(firstInPunch.timestamp)) {
            status = 'Completed';
            const diff = new Date(lastOutPunch.timestamp) - new Date(firstInPunch.timestamp);
@@ -149,6 +152,7 @@ export default function AttendancePage() {
         endTime: lastOutPunch ? new Date(lastOutPunch.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
         hours,
         status,
+        isLate,
         inMapLink: inLoc ? `https://www.google.com/maps?q=${inLoc.lat},${inLoc.lng}` : null,
         outMapLink: outLoc ? `https://www.google.com/maps?q=${outLoc.lat},${outLoc.lng}` : null,
         remark: remarks[group.id] || ''
@@ -244,6 +248,7 @@ export default function AttendancePage() {
       const employeeIds = new Set(rows.map(r => r.employeeId));
       const singleEmployee = employeeIds.size <= 1;
       const presentDays = new Set(rows.map(r => r.date)).size;
+      const lateDays = rows.filter(r => r.isLate).length;
 
       let sundays = 0, workingDays = 0, totalDays = 0;
       if (reportStartDate && reportEndDate) {
@@ -257,7 +262,7 @@ export default function AttendancePage() {
       }
       const leaves = Math.max(0, workingDays - presentDays);
 
-      return { totalHours, presentDays, sundays, workingDays, leaves, totalDays, singleEmployee };
+      return { totalHours, presentDays, sundays, workingDays, leaves, totalDays, singleEmployee, lateDays };
   };
 
   const generatePDF = () => {
@@ -278,8 +283,8 @@ export default function AttendancePage() {
           doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, reportEmployeeName ? 38 : 33);
           
 
-          // Columns - Added Remarks
-          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In", "Out", "Duration", "Remark"];
+          // Columns - Added Remarks + Status (Late marker)
+          const tableColumn = ["Date", "Employee", "Client", "Work Details", "In", "Out", "Duration", "Status", "Remark"];
           const tableRows = previewData.map(row => [
               row.date,
               row.employeeId,
@@ -288,6 +293,7 @@ export default function AttendancePage() {
               row.startTime,
               row.endTime,
               row.hours,
+              row.isLate ? 'Late' : '',
               row.remark || ''
           ]);
 
@@ -305,8 +311,14 @@ export default function AttendancePage() {
                   4: { cellWidth: 15 }, // In
                   5: { cellWidth: 15 }, // Out
                   6: { cellWidth: 20 }, // Duration
-                  6: { cellWidth: 20 }, // Duration
-                  7: { cellWidth: 'auto' }, // Remark
+                  7: { cellWidth: 16 }, // Status
+                  8: { cellWidth: 'auto' }, // Remark
+              },
+              didParseCell: (data) => {
+                  if (data.section === 'body' && data.column.index === 7 && data.cell.raw === 'Late') {
+                      data.cell.styles.textColor = [220, 38, 38];
+                      data.cell.styles.fontStyle = 'bold';
+                  }
               },
           });
 
@@ -315,8 +327,8 @@ export default function AttendancePage() {
           const afterTableY = (doc.lastAutoTable && doc.lastAutoTable.finalY) || 45;
           autoTable(doc, {
               startY: afterTableY + 8,
-              head: [["Days Present", "Total Hours", "Sundays (Paid Leave)", "Leaves (excl. Sundays)"]],
-              body: [[s.presentDays, s.totalHours, s.sundays, s.leaves]],
+              head: [["Days Present", "Total Hours", "Sundays (Paid Leave)", "Leaves (excl. Sundays)", "Late Days"]],
+              body: [[s.presentDays, s.totalHours, s.sundays, s.leaves, s.lateDays]],
               styles: { fontSize: 10, cellPadding: 3, halign: 'center' },
               headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 9 },
               bodyStyles: { fontStyle: 'bold', fontSize: 12 },
@@ -546,13 +558,20 @@ export default function AttendancePage() {
                             {row.workDetails}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                            row.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            row.status === 'Working' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {row.status}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                              row.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              row.status === 'Working' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {row.status}
+                            </span>
+                            {row.isLate && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+                                Late
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.startTime}</td>
                         <td className="px-6 py-4 text-slate-600 font-mono">{row.endTime}</td>
@@ -666,6 +685,7 @@ export default function AttendancePage() {
                                 <th className="px-4 py-2">Work Details</th>
                                 <th className="px-4 py-2">Time</th>
                                 <th className="px-4 py-2">Duration</th>
+                                <th className="px-4 py-2">Status</th>
                                 <th className="px-4 py-2">Remark</th>
                             </tr>
                         </thead>
@@ -684,6 +704,13 @@ export default function AttendancePage() {
                                     <td className="px-4 py-2 text-slate-600 font-mono text-xs">
                                         {row.hours}
                                     </td>
+                                    <td className="px-4 py-2 text-xs">
+                                        {row.isLate && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                                                Late
+                                            </span>
+                                        )}
+                                    </td>
                                     <td className="px-4 py-2 text-slate-600 text-xs italic">
                                         {row.remark}
                                     </td>
@@ -700,7 +727,7 @@ export default function AttendancePage() {
                                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">
                                     Summary{!s.singleEmployee && ' (all employees)'}
                                 </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                                     <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
                                         <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide">Days Present</p>
                                         <p className="text-xl font-bold text-slate-800">{s.presentDays}</p>
@@ -716,6 +743,10 @@ export default function AttendancePage() {
                                     <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
                                         <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wide">Leaves (excl. Sun)</p>
                                         <p className="text-xl font-bold text-slate-800">{s.leaves}</p>
+                                    </div>
+                                    <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+                                        <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide">Late Days</p>
+                                        <p className="text-xl font-bold text-slate-800">{s.lateDays}</p>
                                     </div>
                                 </div>
                                 {!s.singleEmployee && (

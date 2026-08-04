@@ -96,6 +96,17 @@ const QuotationPreview = ({ data }) => {
         </div>
       </div>
 
+      <div className="mb-4 px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-md inline-block">
+        <h4 className="text-[11px] font-bold text-blue-900 mb-1">Bank Details</h4>
+        <div className="text-[10px] text-gray-800 space-y-0.5">
+          <p><span className="font-semibold">Bank Account No:</span> 409000277603</p>
+          <p><span className="font-semibold">Account Holder Name:</span> CHAMPION SECURITY SYSTEM</p>
+          <p><span className="font-semibold">Bank Name:</span> RBL BANK LIMITED</p>
+          <p><span className="font-semibold">IFSC Code:</span> RATN0000068</p>
+          <p><span className="font-semibold">Branch:</span> VILE PARLE</p>
+        </div>
+      </div>
+
       <div className="flex justify-between items-end mb-4">
         <div className="text-xs text-gray-700 leading-relaxed max-w-[60%]">
           {renderTermsBlock()}

@@ -23,10 +23,19 @@ import {
 import { toast } from 'sonner';
 import ConfirmModal from '../components/ConfirmModal';
 
+const STATUS_FILTERS = [
+  { value: 'All', label: 'All Status' },
+  { value: 'Active', label: 'Active' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Converted', label: 'Completed' },
+  { value: 'Lost', label: 'Cancelled / Lost' },
+];
+
 export default function QuotationList() {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
@@ -93,8 +102,16 @@ export default function QuotationList() {
   };
 
   const filteredQuotations = quotations.filter(q => {
+    const matchesStatus = statusFilter === 'All' ? true : (
+        statusFilter === 'Pending'
+            ? (q.status === 'pending' || q.status === 'Pending')
+            : (q.status || 'Active') === statusFilter
+    );
+    if (!matchesStatus) return false;
+
     const term = searchTerm.toLowerCase();
-    
+    if (!term) return true;
+
     if (
         (q.clientName && q.clientName.toLowerCase().includes(term)) ||
         (q.quotationNo && q.quotationNo.toLowerCase().includes(term)) ||
@@ -113,12 +130,12 @@ export default function QuotationList() {
     }
 
     if (items && Array.isArray(items)) {
-        return items.some(item => 
+        return items.some(item =>
             (item.make && String(item.make).toLowerCase().includes(term)) ||
             (item.description && String(item.description).toLowerCase().includes(term))
         );
     }
-    
+
     return false;
   });
 
@@ -128,10 +145,10 @@ export default function QuotationList() {
   const currentQuotations = filteredQuotations.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredQuotations.length / itemsPerPage);
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or status filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
@@ -272,6 +289,26 @@ export default function QuotationList() {
             search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Search quotations...' }}
             actions={<Button href="/quotation/create" icon={Plus}>Create Quotation</Button>}
           />
+
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm cursor-pointer"
+            >
+              {STATUS_FILTERS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            {statusFilter !== 'All' && (
+              <button
+                onClick={() => setStatusFilter('All')}
+                className="text-xs text-red-500 hover:text-red-700 font-medium px-2"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
 
           <Card className="overflow-hidden">
             <div className="p-3 md:p-0">

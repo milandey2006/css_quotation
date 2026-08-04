@@ -42,8 +42,10 @@ export default function ExpensesPage() {
   const [typeFilter, setTypeFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [employeeFilter, setEmployeeFilter] = useState('All');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [monthPick, setMonthPick] = useState(''); // 'YYYY-MM', a convenience that fills dateFrom/dateTo
   const [modalOpen, setModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
@@ -97,6 +99,19 @@ export default function ExpensesPage() {
     }
   };
 
+  // A month picker is just a shortcut that fills in the existing From/To
+  // range -- one click instead of manually picking the 1st and last day.
+  const handleMonthPick = (value) => {
+    setMonthPick(value);
+    if (!value) return;
+    const [year, month] = value.split('-').map(Number);
+    const firstDay = `${value}-01`;
+    const lastDayNum = new Date(year, month, 0).getDate(); // day 0 of next month = last day of this month
+    const lastDay = `${value}-${String(lastDayNum).padStart(2, '0')}`;
+    setDateFrom(firstDay);
+    setDateTo(lastDay);
+  };
+
   const filteredExpenses = useMemo(() => expenses.filter(e => {
     const q = searchTerm.toLowerCase();
     const matchesSearch =
@@ -107,6 +122,7 @@ export default function ExpensesPage() {
     const matchesType = typeFilter === 'All' || e.type === typeFilter;
     const matchesCategory = categoryFilter === 'All' || e.category === categoryFilter;
     const matchesStatus = statusFilter === 'All' || e.status === statusFilter;
+    const matchesEmployee = employeeFilter === 'All' || e.employeeName === employeeFilter;
     // e.date is a plain 'YYYY-MM-DD' string, so lexicographic comparison is
     // already chronological -- no Date parsing/timezone issues. Filling only
     // "From" picks that single date; filling both makes it a range.
@@ -115,8 +131,26 @@ export default function ExpensesPage() {
       dateFrom ? e.date === dateFrom :
       dateTo ? e.date <= dateTo :
       true;
-    return matchesSearch && matchesType && matchesCategory && matchesStatus && matchesDate;
-  }), [expenses, searchTerm, typeFilter, categoryFilter, statusFilter, dateFrom, dateTo]);
+    return matchesSearch && matchesType && matchesCategory && matchesStatus && matchesEmployee && matchesDate;
+  }), [expenses, searchTerm, typeFilter, categoryFilter, statusFilter, employeeFilter, dateFrom, dateTo]);
+
+  // Totals for the currently selected employee, over whatever period/filters
+  // are active -- this is what actually answers "how much did X get this
+  // month". Only meaningful once a specific employee is chosen.
+  const employeeSummary = useMemo(() => {
+    if (employeeFilter === 'All') return null;
+    const given = filteredExpenses.filter(e => e.type === 'given').reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const collected = filteredExpenses.filter(e => e.type === 'collected').reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    return { given, collected, count: filteredExpenses.length };
+  }, [filteredExpenses, employeeFilter]);
+
+  const periodLabel = monthPick
+    ? new Date(`${monthPick}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    : dateFrom && dateTo
+      ? `${new Date(dateFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} – ${new Date(dateTo).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+      : dateFrom
+        ? new Date(dateFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : 'All time';
 
   const totals = useMemo(() => {
     const now = new Date();
@@ -279,6 +313,16 @@ export default function ExpensesPage() {
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-4">
           <select
+            value={employeeFilter}
+            onChange={e => setEmployeeFilter(e.target.value)}
+            className="px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 cursor-pointer"
+          >
+            <option value="All">All Employees</option>
+            {employees.map(emp => (
+              <option key={emp.id} value={emp.name}>{emp.name}{emp.status === 'inactive' ? ' (Inactive)' : ''}</option>
+            ))}
+          </select>
+          <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
             className="px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 cursor-pointer"
@@ -306,11 +350,18 @@ export default function ExpensesPage() {
             <option value="pending">Pending</option>
             <option value="settled">Settled</option>
           </select>
+          <input
+            type="month"
+            value={monthPick}
+            onChange={e => handleMonthPick(e.target.value)}
+            title="Pick a whole month"
+            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+          />
           <div className="flex items-center gap-1.5">
             <input
               type="date"
               value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
+              onChange={e => { setDateFrom(e.target.value); setMonthPick(''); }}
               max={dateTo || undefined}
               title="From date (leave To empty to search a single date)"
               className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
@@ -319,21 +370,43 @@ export default function ExpensesPage() {
             <input
               type="date"
               value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
+              onChange={e => { setDateTo(e.target.value); setMonthPick(''); }}
               min={dateFrom || undefined}
               title="To date (optional -- leave empty to search a single date)"
               className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
             />
           </div>
-          {(searchTerm || typeFilter !== 'All' || categoryFilter !== 'All' || statusFilter !== 'All' || dateFrom || dateTo) && (
+          {(searchTerm || typeFilter !== 'All' || categoryFilter !== 'All' || statusFilter !== 'All' || employeeFilter !== 'All' || dateFrom || dateTo) && (
             <button
-              onClick={() => { setSearchTerm(''); setTypeFilter('All'); setCategoryFilter('All'); setStatusFilter('All'); setDateFrom(''); setDateTo(''); }}
+              onClick={() => { setSearchTerm(''); setTypeFilter('All'); setCategoryFilter('All'); setStatusFilter('All'); setEmployeeFilter('All'); setDateFrom(''); setDateTo(''); setMonthPick(''); }}
               className="text-xs text-red-500 hover:text-red-700 font-medium px-2 self-center"
             >
               Clear Filters
             </button>
           )}
         </div>
+
+        {/* Per-employee total for the selected period */}
+        {employeeSummary && (
+          <Card className="p-4 mb-4 bg-blue-50/60 border-blue-100">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">{employeeFilter} · {periodLabel}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">{employeeSummary.count} {employeeSummary.count === 1 ? 'entry' : 'entries'} in this period</p>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-right">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Given</p>
+                  <p className="text-xl font-bold text-slate-900">₹{employeeSummary.given.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide">Collected</p>
+                  <p className="text-xl font-bold text-purple-700">₹{employeeSummary.collected.toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="overflow-hidden">
           <div className="p-3 md:p-0">

@@ -110,14 +110,17 @@ export default function ReceiptsScreen() {
     setMsg(null);
     try {
       if (mode === 'save') {
-        const name = await saveReceipt(docRef.current, format, receiptNo);
-        setMsg({ type: 'success', text: `Saved to your device: ${name}` });
+        const { fileName, label } = await saveReceipt(docRef.current, format, receiptNo);
+        setMsg({ type: 'success', text: `Saved to ${label}: ${fileName}` });
       } else {
         await shareReceipt(docRef.current, format, receiptNo);
       }
     } catch (e) {
       console.error(e);
-      setMsg({ type: 'error', text: `Could not ${mode} the ${format.toUpperCase()}.` });
+      // Surface the real reason — a generic message makes field issues impossible
+      // to diagnose over the phone.
+      const detail = e?.message ? ` (${e.message})` : '';
+      setMsg({ type: 'error', text: `Could not ${mode} the ${format.toUpperCase()}${detail}` });
     } finally {
       setBusy('');
     }

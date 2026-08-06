@@ -1,5 +1,6 @@
 import React from 'react';
 import { amountInWords } from '../lib/numberToWords';
+import { LOGO, SIGNATURE } from '../lib/receiptAssets';
 
 // A4-sized replica of the web dashboard's ReceiptPreview so a receipt raised
 // from the phone looks identical to one raised from the office.
@@ -16,7 +17,6 @@ const COMPANY = {
   email: 'info@championsecuritysystem.com',
   website: 'https://championsecuritysystem.com/',
   gstin: '27AHXPD7350C1Z8',
-  logo: 'https://championsecuritysystem.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flogo.e3798401.png&w=384&q=75',
 };
 
 const money = (v) =>
@@ -65,7 +65,7 @@ const ReceiptDocument = React.forwardRef(({ data }, ref) => {
       {/* Title + logo */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
         <h1 style={{ fontSize: 34, fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>Payment Receipt</h1>
-        <img src={COMPANY.logo} alt="logo" crossOrigin="anonymous" style={{ width: 64, height: 64, objectFit: 'contain' }} />
+        <img src={LOGO} alt="logo" style={{ width: 64, height: 64, objectFit: 'contain' }} />
       </div>
 
       {/* Company block */}
@@ -154,9 +154,8 @@ const ReceiptDocument = React.forwardRef(({ data }, ref) => {
             <p style={{ fontWeight: 700, fontSize: 13, margin: '0 0 12px' }}>FOR CHAMPION SECURITY SYSTEM</p>
             <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
               <img
-                src="https://quotation.championsecuritysystem.com/sign/signature.png"
+                src={SIGNATURE}
                 alt="Signature"
-                crossOrigin="anonymous"
                 style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
               />
             </div>

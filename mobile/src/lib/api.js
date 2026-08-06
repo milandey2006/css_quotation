@@ -30,6 +30,45 @@ export async function fetchAssignedWorks() {
   return res.json(); // [{ id, clientName, clientPhone, clientAddress, instructions, status }]
 }
 
+// Who am I + which permission-gated features are enabled for this employee.
+export async function fetchMe() {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to load profile');
+  return res.json(); // { id, name, receiptsAccess }
+}
+
+export async function fetchReceipts() {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/mobile/receipts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to load receipts (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function saveReceiptRecord(receipt, id) {
+  const token = await getToken();
+  const res = await fetch(
+    id ? `${API_BASE_URL}/api/mobile/receipts/${id}` : `${API_BASE_URL}/api/mobile/receipts`,
+    {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(receipt),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to save receipt (${res.status})`);
+  }
+  return res.json();
+}
+
 export async function fetchExpenses() {
   const token = await getToken();
   const res = await fetch(`${API_BASE_URL}/api/mobile/expenses`, {

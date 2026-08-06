@@ -108,6 +108,7 @@ export const employees = pgTable('employees', {
   pairingCodeExpiresAt: timestamp('pairing_code_expires_at'),
   deviceToken: text('device_token').unique(), // long-lived token the mobile app uses to authenticate as this employee
   deviceTokenCreatedAt: timestamp('device_token_created_at'),
+  receiptsAccess: text('receipts_access').default('false'), // 'true'/'false' -- whether this field employee can create/edit receipts from the mobile app (admin-granted, per employee, via Settings)
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -137,6 +138,8 @@ export const receipts = pgTable('receipts', {
   date: text('date').notNull(),
   method: text('method').default('Cash'),
   note: text('note'),
+  employeeId: integer('employee_id'), // references employees.id when raised from the mobile app; null for dashboard-created receipts
+  source: text('source').default('admin'), // 'admin' (dashboard) | 'employee' (mobile app)
   createdAt: timestamp('created_at').defaultNow(),
 });
 

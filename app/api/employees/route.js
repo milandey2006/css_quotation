@@ -26,6 +26,7 @@ export async function GET() {
       status: employees.status,
       createdAt: employees.createdAt,
       isPaired: sql`(${employees.deviceToken} is not null)`,
+      receiptsAccess: employees.receiptsAccess,
       deviceTokenCreatedAt: employees.deviceTokenCreatedAt,
       pairingCodeExpiresAt: employees.pairingCodeExpiresAt,
     }).from(employees).orderBy(desc(employees.createdAt));

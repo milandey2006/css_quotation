@@ -6,18 +6,25 @@ import PairingScreen from './screens/PairingScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
 import HistoryScreen from './screens/HistoryScreen.jsx';
 import ExpensesScreen from './screens/ExpensesScreen.jsx';
+import ReceiptsScreen from './screens/ReceiptsScreen.jsx';
+import { fetchMe } from './lib/api';
 
-const TITLES = { home: 'Attendance', history: 'My History', expenses: 'My Expenses' };
+const TITLES = { home: 'Attendance', history: 'My History', expenses: 'My Expenses', receipts: 'Receipts' };
 
 function PairedApp({ name, onUnpair }) {
   const [view, setView] = useState('home'); // 'home' | 'history' | 'expenses'
   const [menuOpen, setMenuOpen] = useState(false);
   const [update, setUpdate] = useState(null); // { url, versionName } when a newer build exists
   const [appVersion, setAppVersion] = useState('');
+  const [canReceipts, setCanReceipts] = useState(false);
 
   useEffect(() => {
     checkForUpdate().then(setUpdate);
     getAppVersion().then(setAppVersion);
+    // Receipts is permission-gated per employee (granted from the dashboard).
+    fetchMe()
+      .then((me) => setCanReceipts(!!me.receiptsAccess))
+      .catch(() => setCanReceipts(false));
   }, []);
 
   const go = (v) => {
@@ -69,6 +76,11 @@ function PairedApp({ name, onUnpair }) {
             <button className={`drawer-item ${view === 'expenses' ? 'active' : ''}`} onClick={() => go('expenses')}>
               My Expenses
             </button>
+            {canReceipts && (
+              <button className={`drawer-item ${view === 'receipts' ? 'active' : ''}`} onClick={() => go('receipts')}>
+                Receipts
+              </button>
+            )}
             <div className="drawer-spacer" />
             <button className="drawer-item danger" onClick={handleUnpair}>
               Unpair device
@@ -82,6 +94,7 @@ function PairedApp({ name, onUnpair }) {
         {view === 'home' && <HomeScreen />}
         {view === 'history' && <HistoryScreen />}
         {view === 'expenses' && <ExpensesScreen />}
+        {view === 'receipts' && canReceipts && <ReceiptsScreen />}
       </div>
     </div>
   );

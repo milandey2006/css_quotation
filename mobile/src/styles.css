@@ -692,6 +692,41 @@ body,
   color: var(--dim);
 }
 
+/* Receipts */
+.form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.receipt-row {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.export-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.export-grid .btn {
+  padding: 12px 8px;
+  font-size: 14px;
+}
+/* The A4 receipt is rendered for export only. It must stay in the layout (not
+   display:none) or modern-screenshot can't capture it, so park it off-screen. */
+.doc-offscreen {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 794px;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .spinner {
   width: 36px;
   height: 36px;

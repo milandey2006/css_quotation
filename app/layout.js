@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 import ToasterProvider from "./components/ToasterProvider";
+import NumberInputScrollGuard from "./components/NumberInputScrollGuard";
 
 export const metadata = {
   title: "Champion Security System",
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
         >
           {children}
           <ToasterProvider />
+          <NumberInputScrollGuard />
         </body>
       </html>
     </ClerkProvider>

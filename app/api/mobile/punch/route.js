@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 import { db } from '../../../../db';
-import { punches, works } from '../../../../db/schema';
+import { punches, works, worksheets } from '../../../../db/schema';
 import { authenticateDevice } from '../_lib/auth';
 
 export async function POST(request) {
@@ -53,7 +53,36 @@ export async function POST(request) {
         }
       }
 
-      await db.update(works).set(updates).where(eq(works.id, Number(workId)));
+      const [workRow] = await db.update(works).set(updates).where(eq(works.id, Number(workId))).returning();
+
+      // On punch-out, log the finished job into the Worksheet — mirrors what the
+      // office's own punch-out flow (app/works/page.js) already does — so field
+      // completions logged via the mobile app show up in the Worksheet too.
+      if (type === 'out' && workRow) {
+        const [lastIn] = await db.select()
+          .from(punches)
+          .where(and(
+            eq(punches.employeeId, employee.name),
+            eq(punches.clientName, inserted[0].clientName),
+            eq(punches.type, 'in')
+          ))
+          .orderBy(desc(punches.timestamp))
+          .limit(1);
+
+        const now = new Date();
+        await db.insert(worksheets).values({
+          date: now.toISOString().split('T')[0],
+          work: workRow.instructions || `Work for ${workRow.clientName}`,
+          person: employee.name,
+          client: `${workRow.clientName}${workRow.clientPhone ? `\n${workRow.clientPhone}` : ''}`,
+          startTime: lastIn ? new Date(lastIn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          endTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          location: workRow.clientAddress || (location ? `${location.lat}, ${location.lng}` : ''),
+          products: '',
+          report: 'Completed via Mobile App Punch Out',
+          status: 'COMPLETED',
+        });
+      }
     }
 
     return NextResponse.json(inserted[0]);

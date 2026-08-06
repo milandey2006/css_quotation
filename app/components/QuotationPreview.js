@@ -23,9 +23,15 @@ const QuotationPreview = ({ data }) => {
     return base + tax;
   };
 
-  const subTotal = safeData.items.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0);
-  const gstTotal = safeData.items.reduce((acc, item) => acc + (((item.qty || 0) * (item.price || 0)) * ((item.gst || 0) / 100)), 0);
-  const grandTotal = subTotal + gstTotal;
+  // Round to paise (2 decimals) throughout. Grand Total is rounded from the exact
+  // (unrounded) sum first, then GST is derived as the remainder — rounding Sub
+  // Total and GST independently can land the two roundings on opposite sides and
+  // make Sub Total + GST off by a paise (or more) from Grand Total.
+  const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+  const subTotal = round2(safeData.items.reduce((acc, item) => acc + ((item.qty || 0) * (item.price || 0)), 0));
+  const grandTotal = round2(safeData.items.reduce((acc, item) => acc + calculateRowTotal(item.qty, item.price, item.gst), 0));
+  const gstTotal = round2(grandTotal - subTotal);
 
   // --- Reusable block renderers (shared between hidden measurement pass and real render) ---
 
@@ -34,21 +40,21 @@ const QuotationPreview = ({ data }) => {
       <div className="w-1/2 pr-4">
         <p className="text-gray-600 text-xs uppercase font-bold mb-1">Amount in Words:</p>
         <p className="text-gray-800 font-semibold italic border-b border-gray-300 pb-1">
-          {Math.round(grandTotal) > 0 ? numberToWords(Math.round(grandTotal)) : 'Zero'}
+          {grandTotal > 0 ? numberToWords(grandTotal) : 'Zero'}
         </p>
       </div>
       <div className="w-64">
         <div className="flex justify-between py-2 border-b ">
           <span className="text-gray-600">Sub Total:</span>
-          <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN')}</span>
+          <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         <div className="flex justify-between py-2 border-b mb-2">
           <span className="text-gray-600">GST (Avg):</span>
-          <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+          <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         <div className="flex justify-between py-3 px-2 text-black rounded-sm">
           <span className="font-bold">Grand Total:</span>
-          <span className="font-bold text-lg">₹ {grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+          <span className="font-bold text-lg">₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       </div>
     </div>
@@ -77,20 +83,20 @@ const QuotationPreview = ({ data }) => {
         <div className="w-64">
           <div className="flex justify-between py-2 border-b">
             <span className="text-gray-600">Sub Total:</span>
-            <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN')}</span>
+            <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between py-2 border-b mb-2">
             <span className="text-gray-600">GST (Avg):</span>
-            <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+            <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between py-3 px-2 text-black rounded-sm">
             <span className="font-bold">Grand Total:</span>
-            <span className="font-bold text-lg">₹ {grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+            <span className="font-bold text-lg">₹ {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="mt-4 text-right">
             <p className="text-gray-600 text-xs uppercase font-bold mb-1">Amount in Words:</p>
             <p className="text-gray-800 font-semibold italic">
-              {Math.round(grandTotal) > 0 ? numberToWords(Math.round(grandTotal)) : 'Zero'}
+              {grandTotal > 0 ? numberToWords(grandTotal) : 'Zero'}
             </p>
           </div>
         </div>
@@ -368,7 +374,7 @@ const QuotationPreview = ({ data }) => {
       <td className="w-20 py-2 border-r border-slate-200 text-right text-slate-800 px-2 align-top">{item.qty === '' ? '' : (item.price || 0).toLocaleString('en-IN')}</td>
       <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 align-top">{item.qty === '' ? '' : `${item.gst}%`}</td>
       <td className="w-24 py-2 border-r border-slate-200 text-right font-bold text-slate-900 px-2 align-top">
-        {item.qty === '' ? '' : calculateRowTotal(item.qty, item.price, item.gst).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+        {item.qty === '' ? '' : calculateRowTotal(item.qty, item.price, item.gst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       {safeData.showMake && <td className="w-20 py-2 text-center text-slate-600 font-semibold align-top">{item.make}</td>}
     </tr>

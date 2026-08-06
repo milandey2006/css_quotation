@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, User, Shield, Check, X } from 'lucide-react';
+import { Menu, User, Shield, Check, X, Receipt, Smartphone } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
@@ -11,6 +11,7 @@ export default function SettingsPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState([]); // field staff who use the mobile app
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
@@ -21,8 +22,35 @@ export default function SettingsPage() {
            return;
        }
        fetchUsers();
+       fetchEmployees();
     }
   }, [isLoaded, user, router]);
+
+  const fetchEmployees = async () => {
+      try {
+          const res = await fetch('/api/employees');
+          const data = await res.json();
+          if (Array.isArray(data)) setEmployees(data.filter(e => e.status !== 'inactive'));
+      } catch (e) {
+          console.error(e);
+      }
+  };
+
+  const toggleReceiptsAccess = async (empId, nextValue) => {
+      setEmployees(prev => prev.map(e => e.id === empId ? { ...e, receiptsAccess: nextValue ? 'true' : 'false' } : e));
+      try {
+          const res = await fetch(`/api/employees/${empId}/permissions`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ receiptsAccess: nextValue }),
+          });
+          if (!res.ok) throw new Error('Failed');
+      } catch (err) {
+          console.error(err);
+          alert('Failed to update permission. Please try again.');
+          fetchEmployees(); // revert
+      }
+  };
 
   const fetchUsers = async () => {
       try {
@@ -193,6 +221,56 @@ export default function SettingsPage() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            {/* Mobile app permissions for field employees */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-8">
+                <div className="p-6 border-b border-slate-100">
+                    <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                        <Smartphone className="w-5 h-5 text-blue-600" />
+                        Field App Permissions
+                    </h2>
+                    <p className="text-slate-500 text-sm mt-1">
+                        Choose which field employees can create and edit receipts from the mobile app.
+                        They can never delete a receipt.
+                    </p>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                    {employees.length === 0 ? (
+                        <div className="px-6 py-8 text-center text-slate-500 text-sm">No active employees found.</div>
+                    ) : employees.map(emp => {
+                        const enabled = emp.receiptsAccess === 'true';
+                        return (
+                            <div key={emp.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                        {(emp.name || '?').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-slate-900 truncate">{emp.name}</p>
+                                        <p className="text-xs text-slate-400">
+                                            {emp.isPaired ? 'App paired' : 'Not paired yet'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => toggleReceiptsAccess(emp.id, !enabled)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex-shrink-0 ${
+                                        enabled
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                    title={enabled ? 'Click to revoke receipt access' : 'Click to allow this employee to create receipts'}
+                                >
+                                    <Receipt className="w-3.5 h-3.5" />
+                                    {enabled ? 'Receipts: Allowed' : 'Receipts: Off'}
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 

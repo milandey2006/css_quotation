@@ -133,7 +133,7 @@ export default function AttendancePage() {
       if (firstInPunch) {
         status = 'Working';
         const inTime = new Date(firstInPunch.timestamp);
-        isLate = (inTime.getHours() * 60 + inTime.getMinutes()) > (10 * 60); // after 10:00 AM
+        isLate = (inTime.getHours() * 60 + inTime.getMinutes()) > (10 * 60 + 20); // after 10:20 AM (10:00 + grace period)
         if (lastOutPunch && new Date(lastOutPunch.timestamp) > new Date(firstInPunch.timestamp)) {
            status = 'Completed';
            const diff = new Date(lastOutPunch.timestamp) - new Date(firstInPunch.timestamp);

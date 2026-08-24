@@ -36,14 +36,19 @@ const QuotationPreview = ({ data }) => {
   // --- Reusable block renderers (shared between hidden measurement pass and real render) ---
 
   const renderTotalsWordsBlock = () => (
-    <div className="flex justify-between items-end mb-8 mt-4">
+    <div className="flex justify-between items-end mb-8 mt-4 relative">
       <div className="w-1/2 pr-4">
         <p className="text-gray-600 text-xs uppercase font-bold mb-1">Amount in Words:</p>
         <p className="text-gray-800 font-semibold italic border-b border-gray-300 pb-1">
           {grandTotal > 0 ? numberToWords(grandTotal) : 'Zero'}
         </p>
       </div>
-      <div className="w-64">
+
+      <div className="absolute right-[280px] bottom-10 h-32 w-48 flex items-end justify-center pointer-events-none">
+        <img src="/sign/signature.png" alt="Signature" className="max-h-full max-w-full object-contain mix-blend-multiply opacity-90" />
+      </div>
+
+      <div className="w-64 relative z-10">
         <div className="flex justify-between py-2 border-b ">
           <span className="text-gray-600">Sub Total:</span>
           <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

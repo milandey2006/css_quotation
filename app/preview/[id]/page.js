@@ -53,7 +53,15 @@ export default function PreviewPage({ params }) {
      if (data) {
         const client = data.receiver?.name || data.receiver?.company || data.clientName || 'Client';
         const docSubject = data.subject || (type === 'Estimate' ? 'Estimate' : 'Quotation');
-        document.title = `${docSubject} - ${client}`;
+        const docNo = data.quotationNo || data.estimateNo || data.proformaNo || '';
+        
+        // Clean title for safe file saving (removes newlines and invalid path chars)
+        const safeTitle = `${client} - ${docSubject} - ${docNo}`
+          .replace(/[\r\n]+/g, ' ')
+          .replace(/[<>:"/\\|?*]+/g, '-')
+          .trim();
+
+        document.title = safeTitle;
 
         // Auto print if requested
         if (searchParams.get('print') === 'true') {

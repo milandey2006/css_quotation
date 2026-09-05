@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import QuotationForm from "../../components/QuotationForm";
 import QuotationPreview from "../../components/QuotationPreview";
 import { buildShareSlug } from '../../utils/shareSlug';
+import { CLIENT_CATEGORIES } from '../../lib/clientData';
 
 // Items need a stable id (independent of array position) so React and dnd-kit can tell items
 // apart correctly during drag-reorder -- keying by array index made the rich text editor and
@@ -48,6 +49,10 @@ function CreateQuotationContent() {
       address: "",
       phone: ""
     },
+    // Editable "Our Clients" lists; seeded from the shared company defaults but
+    // adjustable per quotation in the form. Deep-cloned so edits here never
+    // mutate the shared default array.
+    clientCategories: CLIENT_CATEGORIES.map(c => ({ ...c, entries: [...c.entries] })),
     items: withItemIds([
       {
         description: "",
@@ -89,7 +94,11 @@ Service will be provided in 24 to 48 hours after call received by Authorized Per
                         type: 'Quotation',
                         fixedType: true,
                         publicId: quotation.publicId, // Capture Public ID
-                        items: withItemIds(quotation.data.items)
+                        items: withItemIds(quotation.data.items),
+                        // Backfill client lists for quotations saved before this field existed.
+                        clientCategories: (Array.isArray(quotation.data.clientCategories) && quotation.data.clientCategories.length > 0)
+                            ? quotation.data.clientCategories
+                            : CLIENT_CATEGORIES.map(c => ({ ...c, entries: [...c.entries] }))
                     };
                     
                     if (cloneId) {

@@ -428,6 +428,86 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
          </div>
        </div>
 
+       {/* Our Clients (editable lists shown on the Our Clients page) */}
+       <ClientCategoriesEditor
+         categories={data.clientCategories || []}
+         onChange={(next) => onChange('meta', 'clientCategories', next)}
+       />
+
+    </div>
+  );
+};
+
+// Editable Corporate / Government / Residential client lists. Each category's
+// entries can be edited, added, or removed; the changes flow straight into the
+// quotation data and render on the Our Clients page of the preview.
+const ClientCategoriesEditor = ({ categories, onChange }) => {
+  const updateEntry = (catIndex, entryIndex, value) => {
+    const next = categories.map((c, i) =>
+      i === catIndex ? { ...c, entries: c.entries.map((e, j) => (j === entryIndex ? value : e)) } : c
+    );
+    onChange(next);
+  };
+
+  const addEntry = (catIndex) => {
+    const next = categories.map((c, i) =>
+      i === catIndex ? { ...c, entries: [...c.entries, ''] } : c
+    );
+    onChange(next);
+  };
+
+  const removeEntry = (catIndex, entryIndex) => {
+    const next = categories.map((c, i) =>
+      i === catIndex ? { ...c, entries: c.entries.filter((_, j) => j !== entryIndex) } : c
+    );
+    onChange(next);
+  };
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">Our Clients</h3>
+      <div className="space-y-5">
+        {categories.map((cat, catIndex) => (
+          <div key={cat.title || catIndex} className="border border-gray-100 rounded-lg p-4 bg-gray-50/50">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-bold text-slate-800">{cat.title}</h4>
+              <button
+                type="button"
+                onClick={() => addEntry(catIndex)}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + Add
+              </button>
+            </div>
+            <div className="space-y-2">
+              {cat.entries.length === 0 && (
+                <p className="text-xs text-gray-400 italic">No entries. Click "+ Add" to add one.</p>
+              )}
+              {cat.entries.map((entry, entryIndex) => (
+                <div key={entryIndex} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={entry}
+                    onChange={(e) => updateEntry(catIndex, entryIndex, e.target.value)}
+                    className="flex-1 rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                    placeholder="Client name"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeEntry(catIndex, entryIndex)}
+                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors"
+                    title="Remove"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -9,7 +9,8 @@ import {
   MapPin,
   Receipt,
   Radio,
-  Wallet
+  Wallet,
+  Building2
 } from 'lucide-react';
 
 // Single source of truth for the app's navigation, shared by Sidebar (full menu) and
@@ -24,6 +25,7 @@ export const allNavItems = [
   { name: 'Worksheet',        icon: Table,           href: '/worksheet',   roles: ['admin', 'super-admin'] },
   { name: 'Salary Slips',     icon: FileText,        href: '/salary',      roles: ['admin', 'super-admin'] },
   { name: 'Employees',        icon: User,            href: '/employees',   roles: ['admin', 'super-admin'] },
+  { name: 'Contacts',         icon: Building2,       href: '/contacts',    roles: ['admin', 'super-admin'] },
   { name: 'Expenses',         icon: Wallet,          href: '/expenses',    roles: ['admin', 'super-admin'] },
   { name: 'Attendance',       icon: Clock,           href: '/attendance',  roles: ['super-admin'] },
   { name: 'Office Attendance',icon: Clock,           href: '/punch',       roles: ['user'],                           primary: true },

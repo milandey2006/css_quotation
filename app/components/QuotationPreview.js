@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { numberToWords } from '../utils/numberConverter';
+import { CLIENT_CATEGORIES, CLIENT_LOGOS } from '../lib/clientData';
 
 const QuotationPreview = ({ data }) => {
   // --- Safe Data Access ---
@@ -137,21 +138,78 @@ const QuotationPreview = ({ data }) => {
     </div>
   );
 
-  const renderLastPageFooter = () => (
-    <div className="flex flex-col">
-      <div className="pt-4">
-        <div className="flex justify-between items-start gap-8 mb-6">
-          <div className="flex-1 text-xs text-gray-700 leading-relaxed">
-            {renderTermsBlock()}
+  // Terms & Conditions — now its own dedicated page (used only for regular
+  // quotations; proforma keeps its inline footer above). Signature block sits
+  // on the right so the T&C page ends with a clear approval area.
+  const renderTermsPage = () => (
+    <div className="flex flex-col h-full">
+      <div className="text-center mb-4">
+        <h2 className="text-lg font-bold text-blue-900 uppercase tracking-wider border-b-2 border-blue-900 inline-block px-4 pb-1">Terms &amp; Conditions</h2>
+      </div>
+      <div className="flex-1 text-xs text-gray-700 leading-relaxed">
+        {renderTermsBlock()}
+      </div>
+      <div className="flex justify-end mt-8">
+        <div className="text-center w-[220px]">
+          <p className="font-bold text-xs text-black mb-4">FOR CHAMPION SECURITY SYSTEM</p>
+          <div className="h-16 flex items-center justify-center mb-1">
+            <img src="/sign/signature.png" alt="Signature" className="max-h-full max-w-full object-contain" />
           </div>
+          <p className="font-bold text-xs text-black border-t border-black pt-1">AUTHORISED SIGNATORY</p>
         </div>
+      </div>
+    </div>
+  );
+
+  // Client category lists come from the quotation data when present (editable in
+  // the form), else fall back to the shared company-wide defaults.
+  const clientCategories = Array.isArray(safeData.clientCategories) && safeData.clientCategories.length > 0
+    ? safeData.clientCategories
+    : CLIENT_CATEGORIES;
+
+  const renderBrandsPage = () => (
+    <div className="flex flex-col">
+      <div className="pt-2">
+        <div className="text-center mb-2">
+          <h4 className="text-[13px] font-bold text-blue-900 uppercase border-b-2 border-blue-900 pb-0.5 inline-block tracking-wider">Our Clients</h4>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-3 px-2">
+          {clientCategories.map((cat) => (
+            <div key={cat.title} className="bg-gray-50/60 border border-gray-100 rounded-md px-2.5 py-1.5">
+              <h5 className="text-[10px] font-bold text-blue-900 uppercase text-center border-b border-gray-200 pb-0.5 mb-1">{cat.title}</h5>
+              <ul className="text-[8.5px] text-gray-800 space-y-0.5 list-disc pl-3 leading-snug">
+                {cat.entries.map((entry, i) => (
+                  <li key={i}>{entry}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-3 justify-center items-stretch px-2 mb-5">
+          {CLIENT_LOGOS.map((c, i) => (
+            <div
+              key={i}
+              className="w-[128px] h-[76px] bg-white border border-gray-200 rounded-md flex items-center justify-center p-2 shadow-sm"
+              title={c.name}
+            >
+              {c.logo ? (
+                <img src={c.logo} alt={c.name} className="max-w-full max-h-full object-contain" />
+              ) : (
+                <span className="text-[10px] font-bold text-blue-900 text-center leading-tight">{c.name}</span>
+              )}
+            </div>
+          ))}
+        </div>
+
         {safeData.type !== 'Proforma' && (
           <>
-            <div className="flex flex-col gap-2 text-left w-full mb-4 px-4 bg-gray-50/50 py-2 rounded-md border border-gray-100">
-              <div className="flex flex-row justify-between w-full border-b border-gray-200 pb-2">
+            <div className="flex flex-col gap-1 text-left w-full mb-2 px-3 bg-gray-50/50 py-1.5 rounded-md border border-gray-100">
+              <div className="flex flex-row justify-between w-full border-b border-gray-200 pb-1.5">
                 <div className="flex-1 pr-2">
-                  <h4 className="text-[11px] font-bold text-blue-900 mb-1 text-center">Sales</h4>
-                  <ul className="text-[9px] text-gray-800 space-y-0.5 list-disc pl-3">
+                  <h4 className="text-[10px] font-bold text-blue-900 mb-0.5 text-center">Sales</h4>
+                  <ul className="text-[8.5px] text-gray-800 space-y-0 list-disc pl-3 leading-snug">
                     <li>CCTV Cameras & Recorders</li>
                     <li>Access Control & Biometric Devices</li>
                     <li>Networking Accessories</li>
@@ -159,17 +217,17 @@ const QuotationPreview = ({ data }) => {
                     <li>Surveillance Accessories</li>
                   </ul>
                 </div>
-                <div className="flex-[1.5] flex flex-col border-l border-gray-200 pl-4">
-                  <h4 className="text-[11px] font-bold text-blue-900 mb-1 text-center">Installation Services</h4>
-                  <div className="flex gap-2 text-[9px] text-gray-800 w-full justify-between">
-                    <ul className="space-y-0.5 list-disc pl-3 flex-1">
+                <div className="flex-[1.5] flex flex-col border-l border-gray-200 pl-3">
+                  <h4 className="text-[10px] font-bold text-blue-900 mb-0.5 text-center">Installation Services</h4>
+                  <div className="flex gap-2 text-[8.5px] text-gray-800 w-full justify-between leading-snug">
+                    <ul className="space-y-0 list-disc pl-3 flex-1">
                       <li>AI-Based Video Analytics</li>
                       <li>Access Control Installation</li>
                       <li>End-to-End Security Solutions</li>
                       <li>Structured Cabling</li>
                       <li>VMS Server & NAS Solution</li>
                     </ul>
-                    <ul className="space-y-0.5 list-disc pl-3 flex-1">
+                    <ul className="space-y-0 list-disc pl-3 flex-1">
                       <li>Monitoring & Mobile App</li>
                       <li>Smart Alerts & Real-Time</li>
                       <li>PAN-India Project Support</li>
@@ -180,9 +238,9 @@ const QuotationPreview = ({ data }) => {
                 </div>
               </div>
 
-              <div className="w-full text-center mt-1">
-                <h4 className="text-[11px] font-bold text-blue-900 mb-1">AI Technology Security Solutions</h4>
-                <p className="text-[9px] text-gray-800 flex flex-wrap justify-center gap-1.5 items-center">
+              <div className="w-full text-center mt-0.5">
+                <h4 className="text-[10px] font-bold text-blue-900 mb-0.5">AI Technology Security Solutions</h4>
+                <p className="text-[8.5px] text-gray-800 flex flex-wrap justify-center gap-x-1.5 gap-y-0 items-center leading-snug">
                   <span>• Face Recognition</span>
                   <span>• Vehicle Detection</span>
                   <span>• Intrusion Detection</span>
@@ -195,19 +253,19 @@ const QuotationPreview = ({ data }) => {
               </div>
             </div>
 
-            <div className="text-center mb-4">
-              <p className="text-red-600 font-bold text-[11px]">Trademark -5290052/ Certificate No- 3149953 ISO-9001 : 2015. CERTIFICATE NO- 250210Q105   </p>
+            <div className="text-center mb-2">
+              <p className="text-red-600 font-bold text-[10px]">Trademark -5290052/ Certificate No- 3149953 ISO-9001 : 2015. CERTIFICATE NO- 250210Q105</p>
             </div>
 
-            <div className="text-center mb-6">
-              <h4 className="text-[12px] font-bold text-blue-900 mb-3 uppercase border-b border-gray-300 pb-1 inline-block">Authorized / Supported Brands</h4>
-              <div className="flex flex-wrap gap-x-6 gap-y-4 justify-center items-center px-4 opacity-90">
-                <img src="https://www.vivotek.com/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTIyNDYsInB1ciI6ImJsb2JfaWQifX0=--4c3e2523882130839b9c5ec907aebf7e1c6cf6e9/VIVOTEK%20640X360.jpg" alt="Vivotek" className="h-10 object-contain" />
-                <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-10 object-contain" />
+            <div className="text-center mb-3">
+              <h4 className="text-[11px] font-bold text-blue-900 mb-1.5 uppercase border-b border-gray-300 pb-0.5 inline-block">Authorized / Supported Brands</h4>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center items-center px-4 opacity-90">
+                <img src="https://www.vivotek.com/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTIyNDYsInB1ciI6ImJsb2JfaWQifX0=--4c3e2523882130839b9c5ec907aebf7e1c6cf6e9/VIVOTEK%20640X360.jpg" alt="Vivotek" className="h-7 object-contain" />
+                <img src="https://wicom.ca/wp-content/uploads/2023/03/logo-pelco.png" alt="Pelco" className="h-7 object-contain" />
                 <img src="https://www.secomp.fr/thumbor/o7rRmg8K9vuWJVwmE2VThnpQivM=/filters:cachevalid(2022-09-23T12:17:17.716683):strip_icc():strip_exif()/cms_secde/cms/ueber_uns/markenwelt/hersteller_logos/i-pro_logo_rgb_blue.png" alt="Panasonic" className="h-4 object-contain" />
                 <img src="https://www.matrixcomsec.com/products/wp-content/uploads/2022/01/Matrix-ComSec_Logo1new.png" alt="Matrix" className="h-5 object-contain" />
                 <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnzwl-53GN5z4FI3ITAH6aA946jNx65kaU_Q&s" alt="Hanwha" className="h-5 object-contain" />
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-14 object-contain" />
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJ1lgzY1sVnPeAwLedBr3z4u-zjeaDmHCx5w&s" alt="Honeywell" className="h-10 object-contain" />
                 <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXXUqObfshywppYZKr2Cawp1qPZO0glNL94Q&s" alt="Milesight" className="h-8 object-contain" />
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/D-Link_wordmark.svg/960px-D-Link_wordmark.svg.png" alt="D-Link" className="h-4 object-contain" />
                 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Alcatel-Lucent_logo.svg/1280px-Alcatel-Lucent_logo.svg.png" alt="Alcatel-Lucent" className="h-8 object-contain" />
@@ -223,8 +281,8 @@ const QuotationPreview = ({ data }) => {
               </div>
             </div>
 
-            <div className="flex justify-between items-start text-xs border-t border-gray-200 pt-4 mt-auto">
-              <div className="space-y-1">
+            <div className="flex justify-between items-start text-[10px] border-t border-gray-200 pt-2 mt-auto">
+              <div className="space-y-0.5">
                 <p>
                   <span className="font-semibold text-black">Web:- </span>
                   <a href="https://championsecuritysystem.com" className="text-blue-600 underline">https://championsecuritysystem.com</a>
@@ -238,7 +296,7 @@ const QuotationPreview = ({ data }) => {
                   <a href="mailto:info@championsecuritysystem.com" className="text-blue-600 underline">info@championsecuritysystem.com</a>
                 </p>
               </div>
-              <div className="text-right space-y-1">
+              <div className="text-right space-y-0.5">
                 <p className="font-semibold text-black">Please Click on Link Below (Company Profile)</p>
                 <a href="https://championsecuritysystem.com/documents/profile.pdf" className="text-blue-600 underline block">
                   https://championsecuritysystem.com/documents/profile.pdf
@@ -499,32 +557,24 @@ const QuotationPreview = ({ data }) => {
     if (currentPage.length > 0) result.push(currentPage);
     else if (result.length === 0) result.push([]);
 
-    // Decide where the totals/words block and the closing terms+brands footer go. Previously a
-    // dedicated trailing page was always added for the footer regardless of how little content it
-    // had, which routinely produced an near-empty extra page at the end of short quotations.
-    let footerPlacementResult = 'split';
+    // Non-proforma layout: after items, always emit one dedicated Terms &
+    // Conditions page followed by one dedicated Brands / Our Clients page.
+    // Totals+Words piggybacks on the last items page if there's room, else it
+    // gets its own page inserted before the terms page.
+    let footerPlacementResult = 'inline-totals';
     if (isProforma) {
       if (currentUsed > (currentLimit - proformaFooterHeight)) result.push([]);
+      footerPlacementResult = 'split';
     } else {
-      const FOOTER_GAP = 32; // px, matches the `mt-8` margin between the items table and totals
-      const combinedFooterHeight = totalsWordsHeight + FOOTER_GAP + lastFooterHeight;
+      const FOOTER_GAP = 32;
       const lastPageLimit = result.length === 0 ? page1Available : currentLimit;
-      const remainingOnLastPage = lastPageLimit - currentUsed;
-
-      if (remainingOnLastPage >= combinedFooterHeight) {
-        // Totals + terms + brands all fit right after the items, on the same page.
-        footerPlacementResult = 'same';
-      } else if (combinedFooterHeight <= pageNAvailable) {
-        // Doesn't fit with the items, but fits together on one fresh page.
-        footerPlacementResult = 'new';
-        result.push([]);
-      } else {
-        // Too tall for one page even on its own -- fall back to splitting totals and the
-        // terms+brands footer across two pages, same as before.
-        footerPlacementResult = 'split';
-        if (currentUsed > (lastPageLimit - totalsWordsHeight)) result.push([]);
-        result.push([]);
+      const totalsFitsInline = (lastPageLimit - currentUsed) >= (totalsWordsHeight + FOOTER_GAP);
+      if (!totalsFitsInline) {
+        result.push([]); // dedicated totals page
+        footerPlacementResult = 'separate-totals';
       }
+      result.push([]); // Terms & Conditions page
+      result.push([]); // Brands / Our Clients page
     }
 
     setFooterPlacement(footerPlacementResult);
@@ -583,17 +633,18 @@ const QuotationPreview = ({ data }) => {
             {showInlineTotals && renderProformaInlineFooter()}
           </div>
 
-          {!isProforma && footerPlacement === 'split' && pageIndex === pageCount - 2 && (
-            <div className="mt-8">{renderTotalsWordsBlock()}</div>
-          )}
-          {!isProforma && footerPlacement === 'split' && pageIndex === pageCount - 1 && renderLastPageFooter()}
+          {!isProforma && (() => {
+            const brandsPageIdx = pageCount - 1;
+            const termsPageIdx = pageCount - 2;
+            const totalsPageIdx = footerPlacement === 'separate-totals' ? pageCount - 3 : -1;
+            const lastItemsPageIdx = footerPlacement === 'inline-totals' ? pageCount - 3 : -1;
 
-          {!isProforma && footerPlacement !== 'split' && pageIndex === pageCount - 1 && (
-            <>
-              <div className="mt-8">{renderTotalsWordsBlock()}</div>
-              {renderLastPageFooter()}
-            </>
-          )}
+            if (pageIndex === brandsPageIdx) return renderBrandsPage();
+            if (pageIndex === termsPageIdx) return renderTermsPage();
+            if (pageIndex === totalsPageIdx) return <div className="mt-8">{renderTotalsWordsBlock()}</div>;
+            if (pageIndex === lastItemsPageIdx) return <div className="mt-8">{renderTotalsWordsBlock()}</div>;
+            return null;
+          })()}
         </div>
       </div>
     );
@@ -631,7 +682,7 @@ const QuotationPreview = ({ data }) => {
             </tbody>
           </table>
           <div className="flow-root" ref={totalsWordsRef}>{renderTotalsWordsBlock()}</div>
-          <div className="flow-root" ref={lastFooterRef}>{renderLastPageFooter()}</div>
+          <div className="flow-root" ref={lastFooterRef}>{renderBrandsPage()}</div>
           <div className="flow-root" ref={proformaFooterRef}>{renderProformaInlineFooter()}</div>
         </div>
       </div>

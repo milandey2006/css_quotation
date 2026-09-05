@@ -188,6 +188,20 @@ export const pairingAttempts = pgTable('pairing_attempts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// OEM / vendor contact directory — records that don't fit anywhere else in the
+// app (an OEM sales rep, their colleagues, vertical heads). Each entry can hold
+// multiple people so we can reach a backup when the primary contact is out.
+export const contacts = pgTable('contacts', {
+  id: serial('id').primaryKey(),
+  companyName: text('company_name').notNull(),
+  officeAddress: text('office_address'),
+  rmaAddress: text('rma_address'),
+  products: text('products'), // free-text description of what they sell
+  people: jsonb('people').default([]), // [{ name, designation, mobile, email }]
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const worksheets = pgTable('worksheets', {
   id: serial('id').primaryKey(),
   date: text('date'), // Storing as text for simplicity with date inputs

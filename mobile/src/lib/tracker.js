@@ -1,5 +1,6 @@
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, Capacitor } from '@capacitor/core';
 import { Device } from '@capacitor/device';
+import { Geolocation } from '@capacitor/geolocation';
 import { getToken } from './storage';
 import { API_BASE_URL, DISTANCE_FILTER_M } from '../config';
 
@@ -9,11 +10,20 @@ import { API_BASE_URL, DISTANCE_FILTER_M } from '../config';
 // JS — alive while the screen is off, so the callback keeps firing and we do
 // the HTTP POST ourselves. Anything that fails to POST (no signal) is buffered
 // and retried on the next successful ping, so a dead zone doesn't lose the trail.
+//
+// This plugin is NATIVE-ONLY. On the PWA (iPhone "Add to Home Screen") there is
+// no native background service — iOS Safari suspends JS when the screen is off —
+// so on web we fall back to a FOREGROUND watch (Geolocation.watchPosition) that
+// posts pings only while the app is actually open. That still captures a trail
+// during a visit and, crucially, the location at punch-in / punch-out, which is
+// the part that matters most.
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
+const isNative = Capacitor.isNativePlatform();
 
 const MAX_BUFFER = 500; // cap the offline backlog so memory can't grow unbounded
 
-let watcherId = null;
+let watcherId = null;      // native background watcher id
+let webWatchId = null;     // web (foreground) Geolocation watch id
 let buffer = [];
 let lastSyncAt = null;
 
@@ -25,7 +35,7 @@ export function onStatusChange(fn) {
   return () => listeners.delete(fn);
 }
 export function getStatus() {
-  return { active: watcherId != null, lastSyncAt, pending: buffer.length };
+  return { active: watcherId != null || webWatchId != null, lastSyncAt, pending: buffer.length };
 }
 function emit() {
   const s = getStatus();
@@ -95,6 +105,26 @@ async function handleLocation(location) {
 }
 
 export async function startTracking() {
+  if (!isNative) {
+    // PWA: foreground-only watch. Normalises the browser Geolocation shape to the
+    // { latitude, longitude, accuracy, time } the ping builder expects.
+    if (webWatchId != null) return webWatchId;
+    webWatchId = await Geolocation.watchPosition(
+      { enableHighAccuracy: true, timeout: 20000 },
+      (position, error) => {
+        if (error || !position) return;
+        handleLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          time: position.timestamp,
+        });
+      }
+    );
+    emit();
+    return webWatchId;
+  }
+
   if (watcherId != null) return watcherId;
   watcherId = await BackgroundGeolocation.addWatcher(
     {
@@ -120,6 +150,13 @@ export async function startTracking() {
 }
 
 export async function stopTracking() {
+  if (!isNative) {
+    if (webWatchId == null) return;
+    await Geolocation.clearWatch({ id: webWatchId });
+    webWatchId = null;
+    emit();
+    return;
+  }
   if (watcherId == null) return;
   await BackgroundGeolocation.removeWatcher({ id: watcherId });
   watcherId = null;
@@ -137,6 +174,7 @@ export async function syncNow() {
 // location permission if they declined it during the watcher's request flow.
 export async function openSettings() {
   try {
+    if (!isNative) return; // no-op on the web PWA
     await BackgroundGeolocation.openSettings();
   } catch {
     /* not available on all platforms */

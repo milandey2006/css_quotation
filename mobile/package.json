@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:pwa": "cross-env PWA_BUILD=1 vite build",
     "preview": "vite preview",
     "sync": "cap sync",
     "open:android": "cap open android",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@vitejs/plugin-react": "^4.7.0",
+    "cross-env": "^7.0.3",
     "sharp": "^0.35.3",
     "vite": "^5.4.21"
   }

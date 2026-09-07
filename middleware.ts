@@ -10,6 +10,9 @@ const isPublicRoute = createRouteMatcher([
     '/downloads(.*)',
     // Field-employee mobile app: authenticates via its own device bearer token, not a Clerk session.
     '/api/mobile(.*)',
+    // Installable PWA for iPhone field staff (served from public/app/). It pairs
+    // with its own device token like the Android app — no Clerk session.
+    '/app(.*)',
     // Scheduled cleanup jobs invoked by Vercel Cron (no Clerk session); guarded by CRON_SECRET.
     '/api/cron(.*)',
     // Pretty public-viewer URLs for shared documents, e.g. /quotation/dura-exports-css-jun-2026-261-a8f3k9b2.

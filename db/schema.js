@@ -11,6 +11,7 @@ export const quotations = pgTable('quotations', {
   totalAmount: integer('total_amount'),
   status: text('status').default('pending'), // pass, failed, pending
   data: jsonb('data').notNull(), // Stores the full JSON structure of the quotation
+  deletedAt: timestamp('deleted_at'), // soft-delete: non-null = in Bin, excluded from lists/dashboard; null = active
   createdAt: timestamp('created_at').defaultNow(),
 });
 

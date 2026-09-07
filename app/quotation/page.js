@@ -18,7 +18,8 @@ import {
   CheckCircle,
   XCircle,
   Copy,
-  Share2
+  Share2,
+  Trash
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmModal from '../components/ConfirmModal';
@@ -91,7 +92,7 @@ export default function QuotationList() {
         });
         if (res.ok) {
           fetchDocuments();
-          toast.success('Quotation deleted successfully');
+          toast.success('Moved to Bin');
         } else {
           toast.error('Failed to delete quotation');
         }
@@ -287,7 +288,12 @@ export default function QuotationList() {
             title="Quotations"
             subtitle="Manage and track your official quotations."
             search={{ value: searchTerm, onChange: setSearchTerm, placeholder: 'Search quotations...' }}
-            actions={<Button href="/quotation/create" icon={Plus}>Create Quotation</Button>}
+            actions={
+              <div className="flex items-center gap-2">
+                <Button href="/quotation/bin" icon={Trash} variant="secondary">Bin</Button>
+                <Button href="/quotation/create" icon={Plus}>Create Quotation</Button>
+              </div>
+            }
           />
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -393,8 +399,8 @@ export default function QuotationList() {
                 if (confirmModal.id) handleDelete(confirmModal.id);
                 setConfirmModal({ isOpen: false, id: null });
             }}
-            title="Delete Quotation"
-            message="Are you sure you want to permanently delete this quotation? This action cannot be undone."
+            title="Move to Bin"
+            message="This quotation will be moved to the Bin. You can restore it later, and it won't count in dashboard totals while binned."
           />
 
         </div>

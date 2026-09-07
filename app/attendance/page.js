@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Menu, MapPin, RefreshCw, Calendar, Search, Trash2, FileDown, FileText } from 'lucide-react';
+import { Menu, MapPin, RefreshCw, Calendar, Search, Trash2, FileDown, FileText, Plus, X } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import jsPDF from 'jspdf';
@@ -13,15 +13,35 @@ import ConfirmModal from '../components/ConfirmModal';
 export default function AttendancePage() {
   const { user, isLoaded } = useUser();
   const router = useRouter(); // Need to import useRouter
-  const isSuperAdmin = user?.publicMetadata?.role === 'super-admin';
+  const role = user?.publicMetadata?.role;
+  const isSuperAdmin = role === 'super-admin';
+  const isAdmin = role === 'admin' || role === 'super-admin';
 
   useEffect(() => {
     if (isLoaded) {
-        if (user?.publicMetadata?.role !== 'super-admin') {
+        // Attendance is for office staff: both admin and super-admin can view it
+        // and add manual entries; only super-admin can delete / edit remarks.
+        if (role !== 'super-admin' && role !== 'admin') {
             router.push('/');
         }
     }
-  }, [isLoaded, user, router]);
+  }, [isLoaded, role, router]);
+
+  // Employees — for the name→code map on the report and the manual-entry dropdown.
+  const [employees, setEmployees] = useState([]);
+  useEffect(() => {
+    fetch('/api/employees')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setEmployees(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  // name → employeeCode lookup (punches store the employee's name as employeeId).
+  const empCodeByName = React.useMemo(() => {
+    const map = {};
+    employees.forEach(e => { if (e.name) map[e.name.toLowerCase()] = e.employeeCode || ''; });
+    return map;
+  }, [employees]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -41,6 +61,20 @@ export default function AttendancePage() {
   const [newRemarkText, setNewRemarkText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, row: null });
+
+  // Manual attendance entry (admin / super-admin)
+  const [manualOpen, setManualOpen] = useState(false);
+  const [isSavingManual, setIsSavingManual] = useState(false);
+  const emptyManual = {
+    employeeName: '',
+    date: new Date().toISOString().split('T')[0],
+    inTime: '10:00',
+    outTime: '18:30',
+    clientName: 'Office',
+    workDetails: '',
+    remark: '',
+  };
+  const [manualForm, setManualForm] = useState(emptyManual);
 
   // Load Data
   useEffect(() => {
@@ -265,6 +299,67 @@ export default function AttendancePage() {
       return { totalHours, presentDays, sundays, workingDays, leaves, totalDays, singleEmployee, lateDays };
   };
 
+  // Save a manual attendance entry: writes an IN punch (and an OUT punch when an
+  // out-time is given) with explicit timestamps, so a forgotten/missed punch can
+  // be recorded by an admin. clientName defaults to "Office" so it shows here.
+  const handleSaveManual = async () => {
+    if (isSavingManual) return;
+    if (!manualForm.employeeName) { toast.warning('Please select an employee'); return; }
+    if (!manualForm.date || !manualForm.inTime) { toast.warning('Date and In time are required'); return; }
+    if (manualForm.outTime && manualForm.outTime <= manualForm.inTime) {
+      toast.error('Out time must be after In time'); return;
+    }
+    setIsSavingManual(true);
+    try {
+      const mkTs = (t) => new Date(`${manualForm.date}T${t}:00`).toISOString();
+      const base = {
+        employeeId: manualForm.employeeName, // punches key employees by name
+        clientName: manualForm.clientName || 'Office',
+        areaName: '',
+        workDetails: manualForm.workDetails || 'Manual entry by admin',
+      };
+
+      const reqs = [
+        fetch('/api/punch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...base, type: 'in', timestamp: mkTs(manualForm.inTime) }),
+        }),
+      ];
+      if (manualForm.outTime) {
+        reqs.push(fetch('/api/punch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...base, type: 'out', timestamp: mkTs(manualForm.outTime) }),
+        }));
+      }
+
+      const results = await Promise.all(reqs);
+      if (!results.every(r => r.ok)) throw new Error('One or more punches failed');
+
+      // Optional remark for the day.
+      if (manualForm.remark.trim()) {
+        const dateStr = new Date(`${manualForm.date}T00:00:00`).toLocaleDateString();
+        await fetch('/api/attendance/remarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employeeId: manualForm.employeeName, date: dateStr, remark: manualForm.remark.trim() }),
+        }).catch(() => {});
+      }
+
+      toast.success('Manual attendance added');
+      setManualOpen(false);
+      setManualForm(emptyManual);
+      // Refresh the list.
+      fetch('/api/punch').then(res => res.json()).then(data => setAttendanceData(data)).catch(() => {});
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to add manual attendance');
+    } finally {
+      setIsSavingManual(false);
+    }
+  };
+
   // Load a same-origin image as a data URL so jsPDF can embed it without
   // tainting the canvas. Returns null on any failure (PDF still generates).
   const loadImageDataUrl = (src) =>
@@ -309,7 +404,7 @@ export default function AttendancePage() {
           doc.setFont(undefined, 'normal');
           doc.text('CCTV . Intruder Alarm . Access Controls . Multi Apt. VDP', textX, 23);
           doc.text('Office-21 A Gr Floor, New Apollo Estate, Old Nagardas Road, Andheri East, Mumbai 400069', textX, 27);
-          doc.text('Mobile: 8080808109 / 8080806288   |   info@championsecuritysystem.com', textX, 31);
+          doc.text('Mobile: 8080808109 / 8080806288   |   admin@championsecuritysystem.com', textX, 31);
 
           // Divider under the letterhead
           doc.setDrawColor(200);
@@ -333,9 +428,11 @@ export default function AttendancePage() {
 
           // Columns - Added Remarks + Status (Late marker)
           const tableColumn = ["Date", "Employee", "Client", "Work Details", "In", "Out", "Duration", "Status", "Remark"];
-          const tableRows = previewData.map(row => [
+          const tableRows = previewData.map(row => {
+              const code = empCodeByName[(row.employeeId || '').toLowerCase()];
+              return [
               row.date,
-              row.employeeId,
+              code ? `${row.employeeId}\n${code}` : row.employeeId,
               row.clientName,
               `${row.areaName ? `[${row.areaName}] ` : ''}${row.workDetails}`,
               row.startTime,
@@ -343,7 +440,8 @@ export default function AttendancePage() {
               row.hours,
               row.isLate ? 'Late' : '',
               row.remark || ''
-          ]);
+          ];
+          });
 
           autoTable(doc, {
               head: [tableColumn],
@@ -402,7 +500,7 @@ export default function AttendancePage() {
               doc.setFont(undefined, 'italic');
               doc.text('This is a system-generated attendance report — NOT FOR OFFICIAL USE.', 14, pageHeight - 9);
               doc.setFont(undefined, 'normal');
-              doc.text(`Champion Security System   |   Page ${p} of ${totalPages}`, pageWidth - 14, pageHeight - 9, { align: 'right' });
+              doc.text('Champion Security System', pageWidth - 14, pageHeight - 9, { align: 'right' });
               doc.setTextColor(0);
           }
 
@@ -506,18 +604,29 @@ export default function AttendancePage() {
                   <h1 className="text-2xl font-bold text-slate-900">Attendance Log</h1>
                   <p className="text-slate-500 text-sm">Track employee check-ins, locations, and working hours.</p>
                </div>
-               <button 
-                  onClick={() => {
-                    fetch('/api/punch')
-                      .then(res => res.json())
-                      .then(data => setAttendanceData(data))
-                      .catch(err => console.error(err));
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh
-                </button>
+               <div className="flex items-center gap-2">
+                 {isAdmin && (
+                   <button
+                     onClick={() => { setManualForm(emptyManual); setManualOpen(true); }}
+                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-500/30"
+                   >
+                     <Plus className="w-4 h-4" />
+                     Manual Entry
+                   </button>
+                 )}
+                 <button
+                    onClick={() => {
+                      fetch('/api/punch')
+                        .then(res => res.json())
+                        .then(data => setAttendanceData(data))
+                        .catch(err => console.error(err));
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Refresh
+                  </button>
+               </div>
             </div>
 
             {/* Report Generator Section */}
@@ -839,6 +948,112 @@ export default function AttendancePage() {
                     </button>
                 </div>
             </div>
+        </div>
+      )}
+
+      {/* Manual Attendance Entry Modal */}
+      {manualOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-slate-200 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Manual Attendance Entry</h3>
+                <p className="text-xs text-slate-500">Record a missed / forgotten punch for an employee.</p>
+              </div>
+              <button onClick={() => setManualOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Employee *</label>
+                <select
+                  value={manualForm.employeeName}
+                  onChange={(e) => setManualForm(f => ({ ...f, employeeName: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select employee…</option>
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.name}>
+                      {emp.name}{emp.employeeCode ? ` (${emp.employeeCode})` : ''}{emp.status === 'inactive' ? ' — Inactive' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Date *</label>
+                <input
+                  type="date"
+                  value={manualForm.date}
+                  onChange={(e) => setManualForm(f => ({ ...f, date: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">In Time *</label>
+                  <input
+                    type="time"
+                    value={manualForm.inTime}
+                    onChange={(e) => setManualForm(f => ({ ...f, inTime: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Out Time <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <input
+                    type="time"
+                    value={manualForm.outTime}
+                    onChange={(e) => setManualForm(f => ({ ...f, outTime: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Client</label>
+                <input
+                  type="text"
+                  value={manualForm.clientName}
+                  onChange={(e) => setManualForm(f => ({ ...f, clientName: e.target.value }))}
+                  placeholder="Office"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Keep &quot;Office&quot; for regular office attendance.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Work Details / Remark <span className="text-slate-400 font-normal">(optional)</span></label>
+                <textarea
+                  rows={2}
+                  value={manualForm.remark}
+                  onChange={(e) => setManualForm(f => ({ ...f, remark: e.target.value, workDetails: e.target.value }))}
+                  placeholder="e.g. Forgot to punch, added manually"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
+              <button
+                onClick={() => setManualOpen(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveManual}
+                disabled={isSavingManual}
+                className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md transition-all disabled:opacity-70"
+              >
+                {isSavingManual && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                Save Entry
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

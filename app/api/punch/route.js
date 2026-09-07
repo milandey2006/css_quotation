@@ -7,10 +7,18 @@ import { desc } from 'drizzle-orm';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { employeeId, clientName, areaName, type, location, workDetails } = body;
+    const { employeeId, clientName, areaName, type, location, workDetails, timestamp } = body;
 
     if (!employeeId || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Manual admin entries pass an explicit timestamp; live punches omit it and
+    // get the server clock. Guard against an invalid date string.
+    let ts = new Date();
+    if (timestamp) {
+      const parsed = new Date(timestamp);
+      if (!isNaN(parsed.getTime())) ts = parsed;
     }
 
     const inserted = await db.insert(punches).values({
@@ -21,7 +29,7 @@ export async function POST(request) {
       workDetails: workDetails || '',
       lat: String(location?.lat || ''),
       lng: String(location?.lng || ''),
-      timestamp: new Date(),
+      timestamp: ts,
     }).returning();
 
     return NextResponse.json(inserted[0]);

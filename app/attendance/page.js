@@ -404,7 +404,7 @@ export default function AttendancePage() {
           doc.setFont(undefined, 'normal');
           doc.text('CCTV . Intruder Alarm . Access Controls . Multi Apt. VDP', textX, 23);
           doc.text('Office-21 A Gr Floor, New Apollo Estate, Old Nagardas Road, Andheri East, Mumbai 400069', textX, 27);
-          doc.text('Mobile: 8080808109 / 8080806288   |   admin@championsecuritysystem.com', textX, 31);
+          doc.text('admin@championsecuritysystem.com', textX, 31);
 
           // Divider under the letterhead
           doc.setDrawColor(200);

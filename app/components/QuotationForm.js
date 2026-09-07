@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import RichTextEditor from './RichTextEditor';
+import { TERMS_TEMPLATES, getTermsTemplate } from '../lib/defaultTerms';
 import {
   DndContext, 
   closestCenter,
@@ -417,7 +418,33 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
        {/* Terms & Footer */}
        <div className="mb-8">
          <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">Terms & Footer</h3>
-         <div className="space-y-4">
+         <div className="space-y-3">
+           <div className="flex items-center gap-2">
+             <label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Load template:</label>
+             <select
+               defaultValue=""
+               onChange={(e) => {
+                 const key = e.target.value;
+                 if (!key) return;
+                 const tpl = getTermsTemplate(key);
+                 const cur = (data.terms || '').trim();
+                 // Warn only if there's existing text that isn't already a known template.
+                 const isKnownTemplate = TERMS_TEMPLATES.some((t) => t.terms.trim() === cur);
+                 if (cur && !isKnownTemplate && !window.confirm('Replace the current terms with this template? Your edits will be lost.')) {
+                   e.target.value = '';
+                   return;
+                 }
+                 onChange('meta', 'terms', tpl);
+                 e.target.value = ''; // reset so the same template can be re-picked
+               }}
+               className="flex-1 rounded-md border border-slate-200 bg-white text-slate-700 px-2 py-1.5 text-xs font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+             >
+               <option value="">Choose a T&C format…</option>
+               {TERMS_TEMPLATES.map((t) => (
+                 <option key={t.key} value={t.key}>{t.label}</option>
+               ))}
+             </select>
+           </div>
            <textarea
              rows={10}
              value={data.terms}

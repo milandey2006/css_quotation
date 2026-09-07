@@ -265,23 +265,71 @@ export default function AttendancePage() {
       return { totalHours, presentDays, sundays, workingDays, leaves, totalDays, singleEmployee, lateDays };
   };
 
-  const generatePDF = () => {
+  // Load a same-origin image as a data URL so jsPDF can embed it without
+  // tainting the canvas. Returns null on any failure (PDF still generates).
+  const loadImageDataUrl = (src) =>
+      new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+              try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = img.naturalWidth;
+                  canvas.height = img.naturalHeight;
+                  canvas.getContext('2d').drawImage(img, 0, 0);
+                  resolve({ dataUrl: canvas.toDataURL('image/png'), w: img.naturalWidth, h: img.naturalHeight });
+              } catch {
+                  resolve(null);
+              }
+          };
+          img.onerror = () => resolve(null);
+          img.src = src;
+      });
+
+  const generatePDF = async () => {
        try {
           // Generate PDF
           const doc = new jsPDF();
-          console.log("PDF Document created");
-          
-          // Title
-          doc.setFontSize(18);
-          doc.text("Attendance Report", 14, 20);
-          
-          doc.setFontSize(10);
-          doc.text(`Period: ${reportStartDate} to ${reportEndDate}`, 14, 28);
-          if (reportEmployeeName) {
-              doc.text(`Employee: ${reportEmployeeName}`, 14, 33);
+          const pageWidth = doc.internal.pageSize.getWidth();
+
+          // --- Company letterhead ---------------------------------------
+          const logo = await loadImageDataUrl('/company-logo.png');
+          if (logo?.dataUrl) {
+              const logoH = 16;
+              const logoW = logo.h ? (logo.w / logo.h) * logoH : 16;
+              doc.addImage(logo.dataUrl, 'PNG', 14, 12, logoW, logoH);
           }
-          doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, reportEmployeeName ? 38 : 33);
-          
+          const textX = 34; // leave room for the logo on the left
+          doc.setFontSize(16);
+          doc.setTextColor(30, 58, 138); // blue-900
+          doc.setFont(undefined, 'bold');
+          doc.text('Champion Security System', textX, 18);
+          doc.setFontSize(8);
+          doc.setTextColor(60);
+          doc.setFont(undefined, 'normal');
+          doc.text('CCTV . Intruder Alarm . Access Controls . Multi Apt. VDP', textX, 23);
+          doc.text('Office-21 A Gr Floor, New Apollo Estate, Old Nagardas Road, Andheri East, Mumbai 400069', textX, 27);
+          doc.text('Mobile: 8080808109 / 8080806288   |   info@championsecuritysystem.com', textX, 31);
+
+          // Divider under the letterhead
+          doc.setDrawColor(200);
+          doc.line(14, 35, pageWidth - 14, 35);
+
+          // Report title + meta
+          doc.setTextColor(0);
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(13);
+          doc.text('Attendance Report', 14, 43);
+
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(9);
+          doc.text(`Period: ${reportStartDate} to ${reportEndDate}`, 14, 49);
+          if (reportEmployeeName) {
+              doc.text(`Employee: ${reportEmployeeName}`, 14, 54);
+          }
+          doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 14, 49, { align: 'right' });
+
+          const tableStartY = reportEmployeeName ? 59 : 54;
 
           // Columns - Added Remarks + Status (Late marker)
           const tableColumn = ["Date", "Employee", "Client", "Work Details", "In", "Out", "Duration", "Status", "Remark"];
@@ -300,7 +348,7 @@ export default function AttendancePage() {
           autoTable(doc, {
               head: [tableColumn],
               body: tableRows,
-              startY: reportEmployeeName ? 45 : 40,
+              startY: tableStartY,
               styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
               headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
               columnStyles: {
@@ -339,6 +387,22 @@ export default function AttendancePage() {
               doc.setFontSize(8);
               doc.setTextColor(120);
               doc.text("Note: report covers multiple employees; select one employee for accurate per-person leave counts.", 14, noteY + 6);
+              doc.setTextColor(0);
+          }
+
+          // Footer on every page: brand line + "not for official use" disclaimer.
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const totalPages = doc.internal.getNumberOfPages();
+          for (let p = 1; p <= totalPages; p++) {
+              doc.setPage(p);
+              doc.setDrawColor(220);
+              doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+              doc.setFontSize(7.5);
+              doc.setTextColor(150);
+              doc.setFont(undefined, 'italic');
+              doc.text('This is a system-generated attendance report — NOT FOR OFFICIAL USE.', 14, pageHeight - 9);
+              doc.setFont(undefined, 'normal');
+              doc.text(`Champion Security System   |   Page ${p} of ${totalPages}`, pageWidth - 14, pageHeight - 9, { align: 'right' });
               doc.setTextColor(0);
           }
 

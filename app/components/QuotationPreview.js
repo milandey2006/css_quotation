@@ -55,7 +55,7 @@ const QuotationPreview = ({ data }) => {
           <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         <div className="flex justify-between py-2 border-b mb-2">
-          <span className="text-gray-600">GST (Avg):</span>
+          <span className="text-gray-600">GST:</span>
           <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         <div className="flex justify-between py-3 px-2 text-black rounded-sm">
@@ -67,7 +67,7 @@ const QuotationPreview = ({ data }) => {
   );
 
   const renderTermsBlock = () => (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {(safeData.terms || '').split('\n').map((term, i) => {
         const parts = term.split(/(:|-)/);
         if (parts.length > 1) {
@@ -92,7 +92,7 @@ const QuotationPreview = ({ data }) => {
             <span className="font-bold text-gray-800">₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between py-2 border-b mb-2">
-            <span className="text-gray-600">GST (Avg):</span>
+            <span className="text-gray-600">GST:</span>
             <span className="font-bold text-gray-800">₹{gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between py-3 px-2 text-black rounded-sm">
@@ -146,10 +146,10 @@ const QuotationPreview = ({ data }) => {
       <div className="text-center mb-4">
         <h2 className="text-lg font-bold text-blue-900 uppercase tracking-wider border-b-2 border-blue-900 inline-block px-4 pb-1">Terms &amp; Conditions</h2>
       </div>
-      <div className="flex-1 text-xs text-gray-700 leading-relaxed">
+      <div className="flex-1 text-[11px] text-gray-700 leading-snug">
         {renderTermsBlock()}
       </div>
-      <div className="flex justify-end mt-8">
+      <div className="flex justify-end mt-6">
         <div className="text-center w-[220px]">
           <p className="font-bold text-xs text-black mb-4">FOR CHAMPION SECURITY SYSTEM</p>
           <div className="h-16 flex items-center justify-center mb-1">
@@ -437,7 +437,14 @@ const QuotationPreview = ({ data }) => {
       <td className="w-20 py-2 border-r border-slate-200 text-right text-slate-800 px-2 align-top">{item.qty === '' ? '' : (item.price || 0).toLocaleString('en-IN')}</td>
       <td className="w-12 py-2 border-r border-slate-200 text-center text-slate-800 align-top">{item.qty === '' ? '' : `${item.gst}%`}</td>
       <td className="w-24 py-2 border-r border-slate-200 text-right font-bold text-slate-900 px-2 align-top">
-        {item.qty === '' ? '' : calculateRowTotal(item.qty, item.price, item.gst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {/* Quotation shows the GST-EXCLUSIVE line total (qty × rate); GST is added
+            once at the bottom. Proforma (a tax doc) keeps the inclusive line total. */}
+        {item.qty === ''
+          ? ''
+          : (isProforma
+              ? calculateRowTotal(item.qty, item.price, item.gst)
+              : (item.qty || 0) * (item.price || 0)
+            ).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       {safeData.showMake && <td className="w-20 py-2 text-center text-slate-600 font-semibold align-top">{item.make}</td>}
     </tr>
@@ -615,15 +622,15 @@ const QuotationPreview = ({ data }) => {
                   <tbody>
                     {pageItems.map((item, index) => renderTableRow(item, index))}
                     <tr className="h-full">
-                      <td className="border-r border-slate-200"></td>
-                      <td className="border-r border-slate-200"></td>
-                      {safeData.showImages && safeData.type !== 'Proforma' && <td className="border-r border-slate-200"></td>}
-                      {safeData.type === 'Proforma' && <td className="border-r border-slate-200"></td>}
-                      <td className="border-r border-slate-200"></td>
-                      <td className="border-r border-slate-200"></td>
-                      <td className="border-r border-slate-200"></td>
-                      <td className="border-r border-slate-200"></td>
-                      {safeData.showMake && <td></td>}
+                      <td className="border-r border-slate-200"></td>{/* Sr.n */}
+                      <td className="border-r border-slate-200"></td>{/* Particulars */}
+                      {safeData.showImages && safeData.type !== 'Proforma' && <td className="border-r border-slate-200"></td>}{/* Image */}
+                      {safeData.type === 'Proforma' && <td className="border-r border-slate-200"></td>}{/* HSN */}
+                      <td className="border-r border-slate-200"></td>{/* QTY */}
+                      <td className="border-r border-slate-200"></td>{/* Rate */}
+                      <td className="border-r border-slate-200"></td>{/* GST% */}
+                      <td className="border-r border-slate-200"></td>{/* Total */}
+                      {safeData.showMake && <td></td>}{/* Make */}
                     </tr>
                   </tbody>
                 </table>

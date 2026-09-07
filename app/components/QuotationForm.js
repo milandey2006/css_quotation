@@ -419,7 +419,7 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
          <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">Terms & Footer</h3>
          <div className="space-y-4">
            <textarea
-             rows={6}
+             rows={10}
              value={data.terms}
              onChange={(e) => onChange('meta', 'terms', e.target.value)}
              className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2.5 text-xs font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-y"

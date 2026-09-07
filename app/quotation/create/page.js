@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import QuotationForm from "../../components/QuotationForm";
 import QuotationPreview from "../../components/QuotationPreview";
 import { buildShareSlug } from '../../utils/shareSlug';
+import { DEFAULT_QUOTATION_TERMS } from '../../lib/defaultTerms';
 import { CLIENT_CATEGORIES } from '../../lib/clientData';
 
 // Items need a stable id (independent of array position) so React and dnd-kit can tell items
@@ -63,19 +64,7 @@ function CreateQuotationContent() {
         gst: 18
       }
     ]),
-    terms: `Device warranty :- Five year warranty all /5MP cameras and NVR
-Warranty: Hard Disk warranty for Two years, All POE switch warranty one years from date of supply subject to manufacturing defects only.
-Cable :- Cable will be On Actual, it will be not in warranty in case of Damage. It's based on final installation it could be more or less than the estimated cable length
-Recording :- Recording will be supported upto 20 Days
-Service & Support:- One Year service & support will be provided on call basis.
-Payment Terms: 70% Advance with Confirmed Order and 30% After completion of Work
-Validity Of Quote : 10 days from date of Quote
-Our responsibility ceases the moment the good leave our premises and no claim of breakage, etc would be accepted.
-Completion of work will be in 7days
-Scope of Client :- customer will providing ladder and etc for working accessories proper power source to the equipments, Civil, Carpentry, Fabrication work is in the scope of client
-Complain will be received by Email:- <a href="mailto:support@championsecuritysystem.com" class="text-blue-600 underline">support@championsecuritysystem.com</a> with detail (like camera number, place etc).
-Time:- 10:30am To 6:30pm
-Service will be provided in 24 to 48 hours after call received by Authorized Person`
+    terms: DEFAULT_QUOTATION_TERMS
   });
 
   useEffect(() => {

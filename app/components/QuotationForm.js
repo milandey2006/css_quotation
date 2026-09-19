@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import RichTextEditor from './RichTextEditor';
 import { TERMS_TEMPLATES, getTermsTemplate } from '../lib/defaultTerms';
+import HighlightedTermsTextarea from './HighlightedTermsTextarea';
 import {
   DndContext, 
   closestCenter,
@@ -445,13 +446,13 @@ const QuotationForm = ({ data, onChange, onAddItem, onRemoveItem, onItemChange, 
                ))}
              </select>
            </div>
-           <textarea
+           <HighlightedTermsTextarea
              rows={10}
-             value={data.terms}
+             value={data.terms || ''}
              onChange={(e) => onChange('meta', 'terms', e.target.value)}
-             className="w-full rounded-md border border-gray-200 bg-white text-gray-900 px-3 py-2.5 text-xs font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-y"
              placeholder="Terms and Conditions..."
            />
+           <p className="text-[10px] text-slate-400">The bold part of each line is the point heading — it appears bold in the preview too.</p>
          </div>
        </div>
 

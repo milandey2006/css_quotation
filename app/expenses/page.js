@@ -139,9 +139,17 @@ export default function ExpensesPage() {
   // month". Only meaningful once a specific employee is chosen.
   const employeeSummary = useMemo(() => {
     if (employeeFilter === 'All') return null;
-    const given = filteredExpenses.filter(e => e.type === 'given').reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    const collected = filteredExpenses.filter(e => e.type === 'collected').reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    return { given, collected, count: filteredExpenses.length };
+    const givenRows = filteredExpenses.filter(e => e.type === 'given');
+    const collectedRows = filteredExpenses.filter(e => e.type === 'collected');
+    const sum = (rows) => rows.reduce((s, e) => s + Number(e.amount || 0), 0);
+
+    const given = sum(givenRows);
+    const collected = sum(collectedRows);
+    // "Pending" = not yet settled. For given, it's still to be deducted from
+    // salary; for collected, it's cash the employee still owes the company.
+    const givenPending = sum(givenRows.filter(e => e.status !== 'settled'));
+    const collectedPending = sum(collectedRows.filter(e => e.status !== 'settled'));
+    return { given, collected, givenPending, collectedPending, count: filteredExpenses.length };
   }, [filteredExpenses, employeeFilter]);
 
   const periodLabel = monthPick
@@ -394,14 +402,21 @@ export default function ExpensesPage() {
                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">{employeeFilter} · {periodLabel}</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">{employeeSummary.count} {employeeSummary.count === 1 ? 'entry' : 'entries'} in this period</p>
               </div>
-              <div className="flex gap-6">
-                <div className="text-right">
+              <div className="flex flex-wrap gap-4">
+                <div className="text-right min-w-[110px]">
                   <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Given</p>
                   <p className="text-xl font-bold text-slate-900">₹{employeeSummary.given.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] font-medium text-amber-600">₹{employeeSummary.givenPending.toLocaleString('en-IN')} to deduct</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right min-w-[110px]">
                   <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide">Collected</p>
                   <p className="text-xl font-bold text-purple-700">₹{employeeSummary.collected.toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] font-medium text-amber-600">₹{employeeSummary.collectedPending.toLocaleString('en-IN')} to remit</p>
+                </div>
+                <div className="text-right min-w-[120px] border-l border-blue-200 pl-4">
+                  <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">Pending to Settle</p>
+                  <p className="text-xl font-bold text-amber-700">₹{(employeeSummary.givenPending + employeeSummary.collectedPending).toLocaleString('en-IN')}</p>
+                  <p className="text-[11px] text-slate-500">deduct + remit</p>
                 </div>
               </div>
             </div>

@@ -134,11 +134,10 @@ export default function ExpensesPage() {
     return matchesSearch && matchesType && matchesCategory && matchesStatus && matchesEmployee && matchesDate;
   }), [expenses, searchTerm, typeFilter, categoryFilter, statusFilter, employeeFilter, dateFrom, dateTo]);
 
-  // Totals for the currently selected employee, over whatever period/filters
-  // are active -- this is what actually answers "how much did X get this
-  // month". Only meaningful once a specific employee is chosen.
-  const employeeSummary = useMemo(() => {
-    if (employeeFilter === 'All') return null;
+  // Totals over whatever rows the active filters (period, employee, type...)
+  // leave in the table. Shown as a footer under the table, and as the
+  // per-employee card once a specific employee is chosen.
+  const filteredSummary = useMemo(() => {
     const givenRows = filteredExpenses.filter(e => e.type === 'given');
     const collectedRows = filteredExpenses.filter(e => e.type === 'collected');
     const sum = (rows) => rows.reduce((s, e) => s + Number(e.amount || 0), 0);
@@ -150,7 +149,9 @@ export default function ExpensesPage() {
     const givenPending = sum(givenRows.filter(e => e.status !== 'settled'));
     const collectedPending = sum(collectedRows.filter(e => e.status !== 'settled'));
     return { given, collected, givenPending, collectedPending, count: filteredExpenses.length };
-  }, [filteredExpenses, employeeFilter]);
+  }, [filteredExpenses]);
+
+  const employeeSummary = employeeFilter === 'All' ? null : filteredSummary;
 
   const periodLabel = monthPick
     ? new Date(`${monthPick}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
@@ -433,6 +434,32 @@ export default function ExpensesPage() {
               emptyState="Nothing recorded yet. Click 'Record Entry' to add one."
             />
           </div>
+
+          {/* Grand total of every row currently in the table */}
+          {!loading && filteredSummary.count > 0 && (
+            <div className="border-t-2 border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Total · {employeeFilter === 'All' ? 'All Employees' : employeeFilter} · {periodLabel}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">{filteredSummary.count} {filteredSummary.count === 1 ? 'entry' : 'entries'}</p>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <div className="text-right min-w-[110px]">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Given</p>
+                  <p className="text-lg font-bold text-slate-900">₹{filteredSummary.given.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="text-right min-w-[110px]">
+                  <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide">Collected</p>
+                  <p className="text-lg font-bold text-purple-700">₹{filteredSummary.collected.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="text-right min-w-[120px] border-l border-slate-200 pl-4">
+                  <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">Pending to Settle</p>
+                  <p className="text-lg font-bold text-amber-700">₹{(filteredSummary.givenPending + filteredSummary.collectedPending).toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 

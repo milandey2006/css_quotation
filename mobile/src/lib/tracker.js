@@ -1,7 +1,8 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
 import { Device } from '@capacitor/device';
 import { Geolocation } from '@capacitor/geolocation';
-import { getToken } from './storage';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { getToken, getPunchState } from './storage';
 import { API_BASE_URL, DISTANCE_FILTER_M } from '../config';
 
 // The community background-geolocation plugin. Unlike the paid Transistor
@@ -104,6 +105,20 @@ async function handleLocation(location) {
   emit();
 }
 
+// Builds the ongoing punch-reminder notification text from the saved punch
+// state, e.g. "Punched IN · Office" / "Since 10:30 am — tap to open & punch out".
+async function reminderText() {
+  const state = await getPunchState();
+  const where = state?.label || 'On duty';
+  const since = state?.at
+    ? new Date(state.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null;
+  return {
+    title: `Punched IN · ${where}`,
+    message: `${since ? `Since ${since} — ` : ''}remember to punch out when you leave`,
+  };
+}
+
 export async function startTracking() {
   if (!isNative) {
     // PWA: foreground-only watch. Normalises the browser Geolocation shape to the
@@ -126,13 +141,27 @@ export async function startTracking() {
   }
 
   if (watcherId != null) return watcherId;
+
+  // Android 13+ hides notifications unless POST_NOTIFICATIONS is granted at
+  // runtime (the location plugin only asks for location). Ask once here so the
+  // punch reminder below is actually visible. Best-effort: tracking still runs
+  // if the employee declines.
+  try {
+    const { display } = await LocalNotifications.checkPermissions();
+    if (display !== 'granted') await LocalNotifications.requestPermissions();
+  } catch {
+    /* ignore */
+  }
+
+  const { title, message } = await reminderText();
   watcherId = await BackgroundGeolocation.addWatcher(
     {
       // Android forces a persistent notification while an app uses background
-      // location — it can't be hidden. Kept deliberately neutral so it reads as
-      // a generic "app is running" notice rather than drawing attention to GPS.
-      backgroundMessage: 'App is running.',
-      backgroundTitle: 'Champion Security',
+      // location. We use it as the employee's PUNCH REMINDER: it appears on
+      // punch-in, can't be swiped away, and disappears only on punch-out (when
+      // the watcher is removed). Tapping it opens the app.
+      backgroundMessage: message,
+      backgroundTitle: title,
       requestPermissions: true,
       stale: false,
       distanceFilter: DISTANCE_FILTER_M,

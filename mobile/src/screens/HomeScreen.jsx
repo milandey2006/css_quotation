@@ -108,13 +108,20 @@ export default function HomeScreen() {
         photoBase64: !isOffice && type === 'out' ? photo : undefined,
       });
 
-      if (type === 'in') await startShiftTracking();
-      else await stopShiftTracking();
-
-      // Persist the current punch state so it survives the app being killed.
+      // Persist the current punch state first (survives the app being killed) —
+      // the punch-reminder notification reads it for the place + time.
       const info = { status: type, label, at: new Date().toISOString() };
       await setPunchState(info);
       setPunchInfo(info);
+
+      if (type === 'in') {
+        // Already punched in elsewhere (e.g. office → client)? Restart so the
+        // reminder notification shows the new place.
+        await stopTracking().catch(() => {});
+        await startShiftTracking();
+      } else {
+        await stopShiftTracking();
+      }
 
       setPunchStatus('success');
       setPunchMsg(`Punched ${type === 'in' ? 'IN' : 'OUT'} at ${new Date().toLocaleTimeString()}`);

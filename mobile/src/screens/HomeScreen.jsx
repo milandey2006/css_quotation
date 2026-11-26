@@ -9,7 +9,7 @@ function timeLabel(d) {
   return new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function HomeScreen() {
+export default function HomeScreen({ jobsVersion = 0 }) {
   const [site, setSite] = useState('office'); // 'office' | 'client'
   const [punchStatus, setPunchStatus] = useState('idle'); // idle | loading | success | error
   const [punchMsg, setPunchMsg] = useState('');
@@ -57,7 +57,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (site === 'client') loadWorks();
-  }, [site]);
+  }, [site, jobsVersion]); // jobsVersion: a new job was just assigned → refresh the list
 
   const selectedWork = works.find((w) => w.id === selectedWorkId) || null;
 

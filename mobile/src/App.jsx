@@ -8,6 +8,7 @@ import HistoryScreen from './screens/HistoryScreen.jsx';
 import ExpensesScreen from './screens/ExpensesScreen.jsx';
 import ReceiptsScreen from './screens/ReceiptsScreen.jsx';
 import { fetchMe } from './lib/api';
+import { startJobWatcher, stopJobWatcher, onNewJobs } from './lib/jobWatcher';
 
 const TITLES = { home: 'Attendance', history: 'My History', expenses: 'My Expenses', receipts: 'Receipts' };
 
@@ -17,6 +18,8 @@ function PairedApp({ name, onUnpair }) {
   const [update, setUpdate] = useState(null); // { url, versionName } when a newer build exists
   const [appVersion, setAppVersion] = useState('');
   const [canReceipts, setCanReceipts] = useState(false);
+  const [newJobs, setNewJobs] = useState([]); // jobs assigned since the employee last looked
+  const [jobsVersion, setJobsVersion] = useState(0); // bumps so Home reloads its job list
 
   useEffect(() => {
     checkForUpdate().then(setUpdate);
@@ -25,7 +28,23 @@ function PairedApp({ name, onUnpair }) {
     fetchMe()
       .then((me) => setCanReceipts(!!me.receiptsAccess))
       .catch(() => setCanReceipts(false));
+
+    // Watch for newly assigned jobs → Android notification + in-app banner.
+    const off = onNewJobs((jobs) => {
+      setNewJobs((prev) => [...prev, ...jobs.filter((j) => !prev.some((p) => p.id === j.id))]);
+      setJobsVersion((v) => v + 1);
+    });
+    startJobWatcher();
+    return () => {
+      off();
+      stopJobWatcher();
+    };
   }, []);
+
+  const openNewJobs = () => {
+    setNewJobs([]);
+    setView('home');
+  };
 
   const go = (v) => {
     setView(v);
@@ -35,6 +54,7 @@ function PairedApp({ name, onUnpair }) {
   const handleUnpair = async () => {
     if (!confirm('Unpair this phone? You will need a new code to use it again.')) return;
     await stopTracking();
+    stopJobWatcher();
     await clearSession();
     onUnpair();
   };
@@ -55,6 +75,13 @@ function PairedApp({ name, onUnpair }) {
         <a className="update-banner" href={update.url} target="_blank" rel="noreferrer">
           🔄 A new version is available — tap here to update
         </a>
+      )}
+
+      {newJobs.length > 0 && (
+        <button className="job-banner" onClick={openNewJobs}>
+          🆕 New job assigned: {newJobs.map((j) => j.clientName).join(', ')}
+          <span className="job-banner-sub">Tap to view · choose "Client site" to punch in</span>
+        </button>
       )}
 
       {menuOpen && (
@@ -91,7 +118,7 @@ function PairedApp({ name, onUnpair }) {
       )}
 
       <div className="app-body">
-        {view === 'home' && <HomeScreen />}
+        {view === 'home' && <HomeScreen jobsVersion={jobsVersion} />}
         {view === 'history' && <HistoryScreen />}
         {view === 'expenses' && <ExpensesScreen />}
         {view === 'receipts' && canReceipts && <ReceiptsScreen />}

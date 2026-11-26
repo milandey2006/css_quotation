@@ -4,6 +4,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { getToken, getPunchState } from './storage';
 import { API_BASE_URL, DISTANCE_FILTER_M } from '../config';
+import { maybeCheck } from './jobWatcher';
 
 // The community background-geolocation plugin. Unlike the paid Transistor
 // plugin (which posts pings itself, natively), this one hands each location to
@@ -103,10 +104,12 @@ async function handleLocation(location) {
     if (buffer.length < MAX_BUFFER) buffer.push(ping);
   }
   emit();
+  maybeCheck(); // also look for newly assigned jobs while the app is alive in the background
 }
 
 // Builds the ongoing punch-reminder notification text from the saved punch
-// state, e.g. "Punched IN · Office" / "Since 10:30 am — tap to open & punch out".
+// state, e.g. "Punched IN · Office (since 10:30 am)" /
+// "Reminder: punch out after your work is done". It stays until punch-out.
 async function reminderText() {
   const state = await getPunchState();
   const where = state?.label || 'On duty';
@@ -114,8 +117,8 @@ async function reminderText() {
     ? new Date(state.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : null;
   return {
-    title: `Punched IN · ${where}`,
-    message: `${since ? `Since ${since} — ` : ''}remember to punch out when you leave`,
+    title: `Punched IN · ${where}${since ? ` (since ${since})` : ''}`,
+    message: 'Reminder: punch out after your work is done',
   };
 }
 

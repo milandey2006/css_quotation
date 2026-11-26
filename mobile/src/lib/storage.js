@@ -27,6 +27,7 @@ export async function clearSession() {
   await Preferences.remove({ key: NAME_KEY });
   await Preferences.remove({ key: ON_DUTY_KEY });
   await Preferences.remove({ key: PUNCH_STATE_KEY });
+  await Preferences.remove({ key: 'seenWorkIds' }); // job-alert baseline (jobWatcher.js)
 }
 
 // Current punch state, persisted so it survives the app being cleared from RAM.

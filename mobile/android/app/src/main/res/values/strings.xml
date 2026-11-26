@@ -4,4 +4,8 @@
     <string name="title_activity_main">CSS</string>
     <string name="package_name">com.championsecurity.tracker</string>
     <string name="custom_url_scheme">com.championsecurity.tracker</string>
+    <!-- Punch-reminder notification (background-geolocation foreground service):
+         white status-bar icon (make-notification-icon.mjs) + brand blue. -->
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_notify</string>
+    <string name="capacitor_background_geolocation_notification_color">#2563eb</string>
 </resources>

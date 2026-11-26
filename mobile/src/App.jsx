@@ -35,9 +35,19 @@ function PairedApp({ name, onUnpair }) {
       setJobsVersion((v) => v + 1);
     });
     startJobWatcher();
+
+    // Re-check for an app update every time the app comes back to the screen.
+    // While punched in the process never restarts (the location service keeps
+    // it alive), so a check only at launch would never show the banner.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkForUpdate().then(setUpdate);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
       off();
       stopJobWatcher();
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 

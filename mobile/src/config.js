@@ -26,7 +26,7 @@ export const API_BASE_URL = Capacitor.isNativePlatform()
     : ''; // deployed PWA → same-origin relative URLs
 
 // App version, shown in the menu. Kept in sync with the Android versionName.
-export const APP_VERSION = '1.7';
+export const APP_VERSION = '1.8';
 
 // How far the phone must move (metres) before a new GPS ping is recorded. Lower
 // = more precise trail but more battery/data. 25m is a sensible field default.
